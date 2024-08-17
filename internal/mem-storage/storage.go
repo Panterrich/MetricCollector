@@ -40,19 +40,19 @@ func (m *MemStorage) UpdateMetric(kind, name string, value any) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	specific_metrics, ok := m.storage[kind]
+	specificMetrics, ok := m.storage[kind]
 	if !ok {
-		specific_metrics = make(map[string]metrics.Metric)
-		m.storage[kind] = specific_metrics
+		specificMetrics = make(map[string]metrics.Metric)
+		m.storage[kind] = specificMetrics
 	}
 
-	metric, ok := specific_metrics[name]
+	metric, ok := specificMetrics[name]
 	if !ok {
 		metric = metrics.NewMetric(kind, name)
 		if metric == nil {
 			return ErrInvalidMetricType
 		}
-		specific_metrics[name] = metric
+		specificMetrics[name] = metric
 	}
 
 	if !metric.Update(value) {
