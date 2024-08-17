@@ -23,12 +23,12 @@ func (m *MemStorage) GetMetric(kind, name string) (any, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
-	specific_metrics, ok := m.storage[kind]
+	specificMetrics, ok := m.storage[kind]
 	if !ok {
 		return nil, ErrInvalidMetricType
 	}
 
-	metric, ok := specific_metrics[name]
+	metric, ok := specificMetrics[name]
 	if !ok {
 		return nil, ErrMetricNotFound
 	}
