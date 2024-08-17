@@ -18,8 +18,8 @@ var metricTypes = map[string]func(string) Metric{
 }
 
 func NewMetric(kind, name string) Metric {
-	if new_metric, ok := metricTypes[kind]; ok {
-		return new_metric(name)
+	if newMetric, ok := metricTypes[kind]; ok {
+		return newMetric(name)
 	}
 
 	return nil
