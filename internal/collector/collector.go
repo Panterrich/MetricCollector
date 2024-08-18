@@ -1,9 +1,14 @@
-package memstorage
+package collector
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/Panterrich/MetricCollector/internal/metrics"
+)
 
 type Collector interface {
 	GetMetric(kind, name string) (any, error)
+	GetAllMetrics() []metrics.Metric
 	UpdateMetric(kind, name string, value any) error
 }
 

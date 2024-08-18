@@ -1,4 +1,4 @@
-package memstorage
+package collector
 
 import (
 	"sync"
@@ -7,7 +7,7 @@ import (
 )
 
 type MemStorage struct {
-	mutex   sync.RWMutex
+	lock    sync.RWMutex
 	storage map[string]map[string]metrics.Metric
 }
 
@@ -15,13 +15,14 @@ var _ Collector = (*MemStorage)(nil)
 
 func NewMemStorage() MemStorage {
 	return MemStorage{
+		lock:    sync.RWMutex{},
 		storage: make(map[string]map[string]metrics.Metric),
 	}
 }
 
 func (m *MemStorage) GetMetric(kind, name string) (any, error) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 
 	specificMetrics, ok := m.storage[kind]
 	if !ok {
@@ -36,9 +37,24 @@ func (m *MemStorage) GetMetric(kind, name string) (any, error) {
 	return metric.Value(), nil
 }
 
+func (m *MemStorage) GetAllMetrics() []metrics.Metric {
+	var res []metrics.Metric
+
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	for _, specMetrics := range m.storage {
+		for _, metric := range specMetrics {
+			res = append(res, metric)
+		}
+	}
+
+	return res
+}
+
 func (m *MemStorage) UpdateMetric(kind, name string, value any) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	specificMetrics, ok := m.storage[kind]
 	if !ok {
