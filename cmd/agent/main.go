@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
-	"github.com/Panterrich/MetricCollector/internal/handlers/client"
+	"github.com/Panterrich/MetricCollector/internal/handlers/agent"
 )
 
 var (
@@ -22,6 +22,7 @@ func main() {
 	metrics = &storage
 
 	httpClient := &http.Client{}
+	serverAddress := "http://localhost:8080"
 
 	updateTimer := time.NewTicker(UpdateInterval)
 	reportTimer := time.NewTicker(ReportInterval)
@@ -29,12 +30,14 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
-	select {
-	case <-stop:
-		return
-	case <-updateTimer.C:
-		client.UpdateAllMetrics(metrics)
-	case <-reportTimer.C:
-		client.ReportAllMetrics(metrics, httpClient)
+	for {
+		select {
+		case <-stop:
+			return
+		case <-updateTimer.C:
+			agent.UpdateAllMetrics(metrics)
+		case <-reportTimer.C:
+			agent.ReportAllMetrics(metrics, httpClient, serverAddress)
+		}
 	}
 }

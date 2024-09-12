@@ -1,4 +1,4 @@
-package client
+package agent
 
 import (
 	"fmt"
@@ -140,15 +140,15 @@ func UpdateAllMetrics(storage collector.Collector) {
 	storage.UpdateMetric(metrics.TypeMetricGauge, "RandomValue", rand.Float64())
 }
 
-func ReportAllMetrics(storage collector.Collector, client *http.Client) {
+func ReportAllMetrics(storage collector.Collector, client *http.Client, serverAddress string) {
 	metrics := storage.GetAllMetrics()
 	for _, metric := range metrics {
-		ReportMetric(metric, client)
+		ReportMetric(metric, client, serverAddress)
 	}
 }
 
-func ReportMetric(metric metrics.Metric, client *http.Client) {
-	url := "/update/" + metric.Type() + "/" + metric.Name() + "/"
+func ReportMetric(metric metrics.Metric, client *http.Client, serverAddress string) {
+	url := serverAddress + "/update/" + metric.Type() + "/" + metric.Name() + "/"
 
 	switch metric.Type() {
 	case metrics.TypeMetricCounter:
@@ -174,6 +174,8 @@ func ReportMetric(metric metrics.Metric, client *http.Client) {
 	if err != nil {
 		return
 	}
+
+	request.Header.Set("Content-Type", "text/plain")
 
 	response, err := client.Do(request)
 	if err != nil {
