@@ -8,6 +8,8 @@ import (
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/metrics"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 var Storage collector.Collector
@@ -98,3 +100,27 @@ func GaugeHandler(w http.ResponseWriter, r *http.Request, name, value string) {
 
 	w.WriteHeader(http.StatusOK)
 }
+
+// func ListMetrics(w http.ResponseWriter, r *http.Request) {
+// 	metrics := Storage.GetAllMetrics()
+
+// 	w.Header().Set("Content-Type", "text/html")
+
+// 	for _, metric := range metrics {
+// 		w.Write([]byte(fmt.Sprintf("%10s (%5s): %v\n", metric.Name(), metric.Type(), metric.Value())))
+// 	}
+
+// 	w.WriteHeader(http.StatusOK)
+// }
+
+// func GetMetric(w http.ResponseWriter, r *http.Request) {
+// 	metricType := chi.URLParam(r, "metricType")
+// 	metricName := chi.URLParam(r, "metricName")
+
+// }
+
+// func UpdateMetric(w http.ResponseWriter, r *http.Request) {
+// 	metricType := chi.URLParam(r, "metricType")
+// 	metricName := chi.URLParam(r, "metricName")
+// 	metricValue := chi.URLParam(r, "metricValue")
+// }

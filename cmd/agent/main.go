@@ -1,11 +1,12 @@
 package main
 
 import (
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/handlers/agent"
@@ -21,8 +22,8 @@ func main() {
 	storage := collector.NewMemStorage()
 	metrics = &storage
 
-	httpClient := &http.Client{}
-	serverAddress := "http://localhost:8080"
+	client := resty.New()
+	serverAddress := "localhost:8080"
 
 	updateTimer := time.NewTicker(UpdateInterval)
 	reportTimer := time.NewTicker(ReportInterval)
@@ -37,7 +38,7 @@ func main() {
 		case <-updateTimer.C:
 			agent.UpdateAllMetrics(metrics)
 		case <-reportTimer.C:
-			agent.ReportAllMetrics(metrics, httpClient, serverAddress)
+			agent.ReportAllMetrics(metrics, client, serverAddress)
 		}
 	}
 }
