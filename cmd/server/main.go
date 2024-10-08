@@ -19,11 +19,11 @@ func main() {
 	r.Use(middleware.Recoverer)
 
 	r.Route("/", func(r chi.Router) {
-		// r.Get("/", server.ListMetrics)
-		// r.Route("/", func(r chi.Router) {
-		// 	r.Get("/value/{metricType}/{metricName}", server.GetMetric)
-		// 	r.Post("/update/{metricType}/{metricName}/{metricValue}", server.UpdateMetric)
-		// })
+		r.Get("/", server.GetListMetrics)
+		r.Route("/", func(r chi.Router) {
+			r.Get("/value/{metricType}/{metricName}", server.GetMetric)
+			r.Post("/update/{metricType}/{metricName}/{metricValue}", server.UpdateMetric)
+		})
 	})
 
 	err := http.ListenAndServe(`:8080`, r)
