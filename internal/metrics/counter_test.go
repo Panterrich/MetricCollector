@@ -1,19 +1,23 @@
-package metrics
+package metrics_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Panterrich/MetricCollector/internal/metrics"
 )
 
 func TestCounter(t *testing.T) {
 	type fields struct {
 		name string
 	}
+
 	type args struct {
 		value any
 		want  bool
 	}
+
 	tests := []struct {
 		name     string
 		fields   fields
@@ -45,16 +49,17 @@ func TestCounter(t *testing.T) {
 			expected: int64(5),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewCounter(tt.fields.name)
+			c := metrics.NewCounter(tt.fields.name)
 
 			for _, args := range tt.args {
 				assert.Equal(t, args.want, c.Update(args.value))
 			}
 
 			assert.Equal(t, tt.fields.name, c.Name())
-			assert.Equal(t, TypeMetricCounter, c.Type())
+			assert.Equal(t, metrics.TypeMetricCounter, c.Type())
 			assert.Equal(t, tt.expected, c.Value())
 		})
 	}

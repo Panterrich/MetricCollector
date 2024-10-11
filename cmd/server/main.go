@@ -6,20 +6,27 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Panterrich/MetricCollector/internal/collector"
-	"github.com/Panterrich/MetricCollector/internal/handlers/server"
+	"github.com/caarlos0/env"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
-
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+
+	"github.com/Panterrich/MetricCollector/internal/collector"
+	"github.com/Panterrich/MetricCollector/internal/handlers/server"
 )
 
 var (
-	DefaultEndPoint string = "localhost:8080"
+	DefaultEndPoint = "localhost:8080"
 )
 
+type Config struct {
+	EndPoint string `env:"ADDRESS"`
+}
+
 var (
-	flagEndPoint string
+	cfgEnv Config
+	cfg    Config
 
 	root = &cobra.Command{
 		Use:   "server",
@@ -31,21 +38,28 @@ var (
 				return err
 			}
 
-			if _, _, err := net.SplitHostPort(flagEndPoint); err != nil {
+			if _, _, err := net.SplitHostPort(cfg.EndPoint); err != nil {
 				return fmt.Errorf("invalid end-point for HTTP-server: %w", err)
 			}
 
 			return nil
 		},
-		RunE: run,
+		PreRun: preRun,
+		RunE:   run,
 	}
 )
 
 func init() {
-	root.Flags().StringVarP(&flagEndPoint, "a", "a", DefaultEndPoint, "end-point for HTTP-server")
+	root.Flags().StringVarP(&cfg.EndPoint, "a", "a", DefaultEndPoint, "end-point for HTTP-server")
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func preRun(_ *cobra.Command, _ []string) {
+	if cfgEnv.EndPoint != "" {
+		cfg.EndPoint = cfgEnv.EndPoint
+	}
+}
+
+func run(_ *cobra.Command, _ []string) error {
 	storage := collector.NewMemStorage()
 	server.Storage = &storage
 
@@ -62,7 +76,7 @@ func run(cmd *cobra.Command, args []string) error {
 		})
 	})
 
-	err := http.ListenAndServe(flagEndPoint, r)
+	err := http.ListenAndServe(cfg.EndPoint, r)
 	if err != nil {
 		return fmt.Errorf("http server internal error: %w", err)
 	}
@@ -71,7 +85,15 @@ func run(cmd *cobra.Command, args []string) error {
 }
 
 func main() {
-	err := root.Execute()
+	logger := zerolog.Logger{}
+
+	err := env.Parse(&cfgEnv)
+	if err != nil {
+		logger.Println(err)
+		os.Exit(1)
+	}
+
+	err = root.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

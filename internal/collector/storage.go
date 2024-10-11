@@ -68,6 +68,7 @@ func (m *MemStorage) UpdateMetric(kind, name string, value any) error {
 		if metric == nil {
 			return ErrInvalidMetricType
 		}
+
 		specificMetrics[name] = metric
 	}
 
