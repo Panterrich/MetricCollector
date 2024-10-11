@@ -64,7 +64,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	err := http.ListenAndServe(flagEndPoint, r)
 	if err != nil {
-		return fmt.Errorf("Http server internal error: %w", err)
+		return fmt.Errorf("http server internal error: %w", err)
 	}
 
 	return nil
