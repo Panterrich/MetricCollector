@@ -1,15 +1,51 @@
 package main
 
 import (
+	"fmt"
+	"net"
 	"net/http"
+	"os"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/handlers/server"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
+
+	"github.com/spf13/cobra"
 )
 
-func main() {
+var (
+	DefaultEndPoint string = "localhost:8080"
+)
+
+var (
+	flagEndPoint string
+
+	root = &cobra.Command{
+		Use:   "server",
+		Short: "Server for storing metrics",
+		Long:  "Server for storing metrics",
+		Args: func(cmd *cobra.Command, args []string) error {
+
+			if err := cobra.ExactArgs(0)(cmd, args); err != nil {
+				return err
+			}
+
+			if _, _, err := net.SplitHostPort(flagEndPoint); err != nil {
+				return fmt.Errorf("invalid end-point for HTTP-server: %w", err)
+			}
+
+			return nil
+		},
+		RunE: run,
+	}
+)
+
+func init() {
+	root.Flags().StringVarP(&flagEndPoint, "a", "a", DefaultEndPoint, "end-point for HTTP-server")
+}
+
+func run(cmd *cobra.Command, args []string) error {
 	storage := collector.NewMemStorage()
 	server.Storage = &storage
 
@@ -26,8 +62,17 @@ func main() {
 		})
 	})
 
-	err := http.ListenAndServe(`:8080`, r)
+	err := http.ListenAndServe(flagEndPoint, r)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Http server internal error: %w", err)
+	}
+
+	return nil
+}
+
+func main() {
+	err := root.Execute()
+	if err != nil {
+		os.Exit(1)
 	}
 }
