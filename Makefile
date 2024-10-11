@@ -1,3 +1,23 @@
+
+LDFLAGS=
+
+BUILD_ENVPARMS:=CGO_ENABLED=0
+
+LOCAL_BIN:=$(CURDIR)/bin
+
+##################### GOX #####################
+GOX_BIN:=$(LOCAL_BIN)/gox
+
+# local gox
+ifeq ($(wildcard $(GOX_BIN)),)
+GOX_BIN:=
+endif
+
+# Check global bin version
+ifneq (, $(shell which gox))
+GOX_BIN:=$(shell which gox)
+endif
+
 .PHONY: all
 all: test build ## default scratch target: test and build
 
@@ -5,13 +25,20 @@ all: test build ## default scratch target: test and build
 .lint-full: install-lint
 	$(GOLANGCI_BIN) run --config=.golangci.yml ./...
 
+.PHONY: .bin-deps
+.bin-deps:
+	mkdir -p bin
+	$(info Installing binary dependencies...)
+	GOBIN=$(LOCAL_BIN) go install github.com/mitchellh/gox@v1.0.1  && \
+	GOBIN=$(LOCAL_BIN) go install golang.org/x/tools/cmd/goimports@v0.1.9 && \
+
 .PHONY: .deps
 .deps:
 	$(info Install dependencies...)
 	go mod download
 
-.PHONY: deps
-deps: .deps ## install project dependencies
+.PHONY: update-deps
+update-deps: .deps .bin-deps
 
 .PHONY: .test
 .test:
@@ -25,7 +52,7 @@ test: .test ## run unit tests
 # можно переопределить в Makefile, по дефолту все из ./cmd кроме основного пакета
 # пример переопределения CMD_LIST:= ./cmd/example ./cmd/app ./cmd/cron
 ifndef CMD_LIST
-CMD_LIST:=$(shell ls ./cmd | sed -e 's/^/.\/cmd\//' | grep -v "./cmd/verifier")
+CMD_LIST:=$(shell ls ./cmd | sed -e 's/^/.\/cmd\//')
 endif
 # определение текущий ос
 ifndef HOSTOS
@@ -47,9 +74,8 @@ DISABLE_CMD_LIST_BUILD?=0
 .build:
 # сначала собирается основной сервис, скачиваются нужные пакеты и все кладется в кеш для дальнейшего использования
 	$(info Building...)
-	$(BUILD_ENVPARMS) $(GOX_BIN) -output="$(BIN_DIR)/{{.Dir}}" -osarch="$(HOSTOS)/$(HOSTARCH)" -ldflags "$(LDFLAGS)" ./cmd/verifier
 	@if [ -n "$(CMD_LIST)" ] && [ "$(DISABLE_CMD_LIST_BUILD)" != 1 ]; then\
-		$(BUILD_ENVPARMS) $(GOX_BIN) -output="$(BIN_DIR)/{{.Dir}}" -osarch="$(HOSTOS)/$(HOSTARCH)" -ldflags "$(LDFLAGS)" $(CMD_LIST);\
+		$(BUILD_ENVPARMS) $(GOX_BIN) -output="$(BIN_DIR)" -osarch="$(HOSTOS)/$(HOSTARCH)" -ldflags "$(LDFLAGS)" $(CMD_LIST);\
 	fi
 
 .PHONY: build

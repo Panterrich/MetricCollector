@@ -15,7 +15,7 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
+	// r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
 	r.Route("/", func(r chi.Router) {

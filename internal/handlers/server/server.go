@@ -12,59 +12,6 @@ import (
 
 var Storage collector.Collector
 
-// type MetricCallback func(w http.ResponseWriter, r *http.Request, name, value string)
-
-// func removeEmptyStrings(input []string) []string {
-// 	var result []string
-// 	for _, str := range input {
-// 		if str != "" {
-// 			result = append(result, str)
-// 		}
-// 	}
-// 	return result
-// }
-
-// func MetricMiddleware(next MetricCallback) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		if r.Method != http.MethodPost {
-// 			http.Error(w, "only POST requests are allowed!", http.StatusMethodNotAllowed)
-// 			return
-// 		}
-
-// 		if r.Header.Get("Content-Type") != "text/plain" {
-// 			http.Error(w, "only Content-Type \"text/plain\" are allowed!", http.StatusBadRequest)
-// 			return
-// 		}
-
-// 		segments := strings.Split(r.URL.Path, "/")
-// 		segments = removeEmptyStrings(segments)
-
-// 		if len(segments) == 2 {
-// 			http.Error(w, "name metric not found", http.StatusNotFound)
-// 			return
-// 		}
-
-// 		if len(segments) != 4 {
-// 			http.Error(w, "invalid format request", http.StatusBadRequest)
-// 			return
-// 		}
-
-// 		name := segments[2]
-// 		value := segments[3]
-
-// 		next(w, r, name, value)
-// 	})
-// }
-
-// func UnknownMetricHandler(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodPost {
-// 		http.Error(w, "only POST requests are allowed!", http.StatusMethodNotAllowed)
-// 		return
-// 	}
-
-// 	http.Error(w, "unknown type metric!", http.StatusBadRequest)
-// }
-
 func ConvertByType(metric, value string) (any, error) {
 	switch metric {
 	case metrics.TypeMetricCounter:
@@ -102,12 +49,10 @@ func GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	message := fmt.Sprintf("%10s (%5s): %v\n", metricName, metricType, value)
+	message := fmt.Sprintf("%v\n", value)
 	if _, err := w.Write([]byte(message)); err != nil {
 		panic(err)
 	}
-
-	w.WriteHeader(http.StatusOK)
 }
 
 func UpdateMetric(w http.ResponseWriter, r *http.Request) {
