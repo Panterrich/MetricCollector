@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
@@ -18,15 +19,19 @@ import (
 
 var (
 	DefaultEndPoint = "localhost:8080"
+	DefaultLogLevel = zerolog.InfoLevel
 )
 
 type Config struct {
 	EndPoint string `env:"ADDRESS"`
+	LogLevel int    `env:"LOG_LVL"`
 }
 
 var (
-	cfgEnv Config
 	cfg    Config
+	cfgEnv = Config{
+		LogLevel: int(zerolog.TraceLevel) - 1,
+	}
 
 	root = &cobra.Command{
 		Use:   "server",
@@ -51,21 +56,28 @@ var (
 
 func init() {
 	root.Flags().StringVarP(&cfg.EndPoint, "a", "a", DefaultEndPoint, "end-point for HTTP-server")
+	root.Flags().IntVar(&cfg.LogLevel, "log-level", int(DefaultLogLevel), "log level (zerolog)")
 }
 
 func preRun(_ *cobra.Command, _ []string) {
 	if cfgEnv.EndPoint != "" {
 		cfg.EndPoint = cfgEnv.EndPoint
 	}
+
+	if cfgEnv.LogLevel >= int(zerolog.TraceLevel) {
+		cfg.LogLevel = cfgEnv.LogLevel
+	}
 }
 
 func run(_ *cobra.Command, _ []string) error {
+	zerolog.SetGlobalLevel(zerolog.Level(cfg.LogLevel))
+
 	storage := collector.NewMemStorage()
 	server.Storage = &storage
 
 	r := chi.NewRouter()
 
-	// r.Use(middleware.Logger)
+	r.Use(server.WithLogging)
 	r.Use(middleware.Recoverer)
 
 	r.Route("/", func(r chi.Router) {
@@ -85,11 +97,9 @@ func run(_ *cobra.Command, _ []string) error {
 }
 
 func main() {
-	logger := zerolog.Logger{}
-
 	err := env.Parse(&cfgEnv)
 	if err != nil {
-		logger.Println(err)
+		log.Err(err).Send()
 		os.Exit(1)
 	}
 
