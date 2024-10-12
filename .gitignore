@@ -15,10 +15,7 @@
 *.out
 
 # Binaries
-cmd/agent/main
-cmd/agent/agent
-cmd/server/main
-cmd/server/server
+bin/
 
 # Dependency directories (remove the comment below to include it)
 vendor/
@@ -30,3 +27,7 @@ go.work.sum
 # IDEs directories
 .idea
 .vscode
+.DS_Store
+
+# tests
+*-arm64
