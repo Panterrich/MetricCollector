@@ -1,10 +1,7 @@
 package main
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"net/http"
 
 	"github.com/go-resty/resty/v2"
 

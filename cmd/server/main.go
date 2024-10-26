@@ -5,6 +5,7 @@ import (
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/handlers/server"
+
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
