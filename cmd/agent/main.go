@@ -9,11 +9,10 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+  "github.com/spf13/cobra"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/handlers/agent"
-
-	"github.com/spf13/cobra"
 )
 
 var (
