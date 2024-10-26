@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/metrics"
-	"github.com/go-chi/chi/v5"
 )
 
 var Storage collector.Collector

@@ -6,9 +6,10 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/go-resty/resty/v2"
+
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/metrics"
-	"github.com/go-resty/resty/v2"
 )
 
 type MemRuntimeStat struct {
