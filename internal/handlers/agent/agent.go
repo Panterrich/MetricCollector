@@ -2,14 +2,14 @@ package agent
 
 import (
 	"fmt"
-	"io"
 	"math/rand"
-	"net/http"
 	"runtime"
 	"strconv"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/metrics"
+
+  "github.com/go-resty/resty/v2"
 )
 
 type MemRuntimeStat struct {
@@ -140,15 +140,15 @@ func UpdateAllMetrics(storage collector.Collector) {
 	storage.UpdateMetric(metrics.TypeMetricGauge, "RandomValue", rand.Float64())
 }
 
-func ReportAllMetrics(storage collector.Collector, client *http.Client, serverAddress string) {
+func ReportAllMetrics(storage collector.Collector, client *resty.Client, serverAddress string) {
 	metrics := storage.GetAllMetrics()
 	for _, metric := range metrics {
 		ReportMetric(metric, client, serverAddress)
 	}
 }
 
-func ReportMetric(metric metrics.Metric, client *http.Client, serverAddress string) {
-	url := serverAddress + "/update/" + metric.Type() + "/" + metric.Name() + "/"
+func ReportMetric(metric metrics.Metric, client *resty.Client, serverAddress string) {
+	var value string
 
 	switch metric.Type() {
 	case metrics.TypeMetricCounter:
@@ -156,37 +156,28 @@ func ReportMetric(metric metrics.Metric, client *http.Client, serverAddress stri
 		if !ok {
 			return
 		}
-		url += strconv.FormatInt(val, 10)
+		value = strconv.FormatInt(val, 10)
 
 	case metrics.TypeMetricGauge:
 		val, ok := metric.Value().(float64)
 		if !ok {
 			return
 		}
-		url += strconv.FormatFloat(val, 'f', -1, 64)
+		value = strconv.FormatFloat(val, 'f', -1, 64)
 
 	default:
 		fmt.Println("unknown type")
 		return
 	}
 
-	request, err := http.NewRequest(http.MethodPost, url, http.NoBody)
-	if err != nil {
-		return
-	}
+	resp, err := client.R().
+		SetHeader("Content-Type", "text/plain").
+		SetPathParams(map[string]string{
+			"address": serverAddress,
+			"name":    metric.Name(),
+			"type":    metric.Type(),
+			"value":   value,
+		}).Post("http://{address}/update/{type}/{name}/{value}")
 
-	request.Header.Set("Content-Type", "text/plain")
-
-	response, err := client.Do(request)
-	if err != nil {
-		return
-	}
-
-	defer response.Body.Close()
-
-	_, err = io.Copy(io.Discard, response.Body)
-	response.Body.Close()
-	if err != nil {
-		fmt.Println(err)
-	}
+	fmt.Println(resp, err)
 }
