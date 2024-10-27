@@ -4,13 +4,18 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
-	"strconv"
+	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/jpillora/backoff"
+	"github.com/rs/zerolog/log"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
-	"github.com/Panterrich/MetricCollector/internal/metrics"
+	"github.com/Panterrich/MetricCollector/internal/handlers"
+	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
+
+const MaxAttempts = 10
 
 type MemRuntimeStat struct {
 	Name   string
@@ -149,7 +154,10 @@ func ReportAllMetrics(storage collector.Collector, client *resty.Client, serverA
 }
 
 func ReportMetric(metric metrics.Metric, client *resty.Client, serverAddress string) {
-	var value string
+	value := handlers.Metrics{
+		ID:    metric.Name(),
+		MType: metric.Type(),
+	}
 
 	switch metric.Type() {
 	case metrics.TypeMetricCounter:
@@ -158,27 +166,46 @@ func ReportMetric(metric metrics.Metric, client *resty.Client, serverAddress str
 			return
 		}
 
-		value = strconv.FormatInt(val, 10)
+		value.Delta = &val
 	case metrics.TypeMetricGauge:
 		val, ok := metric.Value().(float64)
 		if !ok {
 			return
 		}
 
-		value = strconv.FormatFloat(val, 'f', -1, 64)
+		value.Value = &val
 	default:
-		fmt.Println("unknown type")
+		log.Error().Msg("unknown type")
 		return
 	}
 
-	resp, err := client.R().
-		SetHeader("Content-Type", "text/plain").
-		SetPathParams(map[string]string{
-			"address": serverAddress,
-			"name":    metric.Name(),
-			"type":    metric.Type(),
-			"value":   value,
-		}).Post("http://{address}/update/{type}/{name}/{value}")
+	backoffScheduler := &backoff.Backoff{
+		Jitter: true,
+	}
 
-	fmt.Println(resp, err)
+	for {
+		if backoffScheduler.Attempt() == MaxAttempts {
+			return
+		}
+
+		resp, err := client.R().
+			SetBody(value).
+			SetPathParams(map[string]string{
+				"address": serverAddress,
+			}).Post("http://{address}/update/")
+
+		if err != nil {
+			d := backoffScheduler.Duration()
+
+			log.Info().
+				Err(err).
+				Dur("time reconnecting", d).
+				Send()
+			time.Sleep(d)
+
+			continue
+		}
+
+		fmt.Println(resp, err)
+	}
 }

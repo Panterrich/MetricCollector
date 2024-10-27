@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
-	"github.com/Panterrich/MetricCollector/internal/metrics"
+	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
 var Storage collector.Collector
@@ -88,7 +88,6 @@ func UpdateMetric(w http.ResponseWriter, r *http.Request) {
 
 func WithLogging(h http.Handler) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
-
 		start := time.Now()
 
 		responseData := &responseData{
