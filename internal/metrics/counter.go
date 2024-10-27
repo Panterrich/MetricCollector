@@ -9,7 +9,7 @@ var _ Metric = (*Counter)(nil)
 
 func NewCounter(name string) Metric {
 	return &Counter{
-		name:  name,
+		name: name,
 	}
 }
 

@@ -18,12 +18,51 @@ ifneq (, $(shell which gox))
 GOX_BIN:=$(shell which gox)
 endif
 
-.PHONY: all
-all: test build ## default scratch target: test and build
+##################### GOLANG-CI RELATED CHECKS #####################
+# Check global GOLANGCI-LINT
+GOLANGCI_BIN:=$(LOCAL_BIN)/golangci-lint ## local linter binary path
+GOLANGCI_TAG:=1.61.0 ## linter version to use
+GOLANGCI_LINTER_IMAGE:="golangci/golangci-lint" ## pipeline linter image to use in ci-lint target
+
+# Check local bin version
+ifneq ($(wildcard $(GOLANGCI_BIN)),)
+GOLANGCI_BIN_VERSION:=$(shell $(GOLANGCI_BIN) --version)
+ifneq ($(GOLANGCI_BIN_VERSION),)
+GOLANGCI_BIN_VERSION_SHORT:=$(shell echo "$(GOLANGCI_BIN_VERSION)" | sed -E 's/.* version (.*) built from .* on .*/\1/g')
+else
+GOLANGCI_BIN_VERSION_SHORT:=0
+endif
+ifneq "$(GOLANGCI_TAG)" "$(word 1, $(sort $(GOLANGCI_TAG) $(GOLANGCI_BIN_VERSION_SHORT)))"
+GOLANGCI_BIN:=
+endif
+endif
+
+# Check global bin version
+ifneq (, $(shell which golangci-lint))
+GOLANGCI_VERSION:=$(shell golangci-lint --version 2> /dev/null )
+ifneq ($(GOLANGCI_VERSION),)
+GOLANGCI_VERSION_SHORT:=$(shell echo "$(GOLANGCI_VERSION)"|sed -E 's/.* version (.*) built from .* on .*/\1/g')
+else
+GOLANGCI_VERSION_SHORT:=0
+endif
+ifeq "$(GOLANGCI_TAG)" "$(word 1, $(sort $(GOLANGCI_TAG) $(GOLANGCI_VERSION_SHORT)))"
+GOLANGCI_BIN:=$(shell which golangci-lint)
+endif
+endif
+.PHONY: install-lint
+install-lint: ## install golangci-lint binary
+ifeq ($(wildcard $(GOLANGCI_BIN)),)
+	$(info Downloading golangci-lint v$(GOLANGCI_TAG))
+	GOBIN=$(LOCAL_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v$(GOLANGCI_TAG)
+GOLANGCI_BIN:=$(LOCAL_BIN)/golangci-lint
+endif
 
 .PHONY: .lint-full
 .lint-full: install-lint
 	$(GOLANGCI_BIN) run --config=.golangci.yml ./...
+
+.PHONY: lint-full
+lint-full: .lint-full
 
 .PHONY: .bin-deps
 .bin-deps:
@@ -39,6 +78,9 @@ all: test build ## default scratch target: test and build
 
 .PHONY: update-deps
 update-deps: .deps .bin-deps
+
+.PHONY: all
+all: test build ## default scratch target: test and build
 
 .PHONY: .test
 .test:

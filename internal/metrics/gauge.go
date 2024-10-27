@@ -9,7 +9,7 @@ var _ Metric = (*Gauge)(nil)
 
 func NewGauge(name string) Metric {
 	return &Gauge{
-		name:  name,
+		name: name,
 	}
 }
 

@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/metrics"
-	"github.com/go-chi/chi/v5"
 )
 
 var Storage collector.Collector
@@ -15,17 +16,23 @@ var Storage collector.Collector
 func ConvertByType(metric, value string) (any, error) {
 	switch metric {
 	case metrics.TypeMetricCounter:
-		v, err := strconv.ParseInt(value, 10, 64)
-		return v, err
+		if v, err := strconv.ParseInt(value, 10, 64); err != nil {
+			return nil, fmt.Errorf("invalid parse int: %w", err)
+		} else {
+			return v, nil
+		}
 	case metrics.TypeMetricGauge:
-		v, err := strconv.ParseFloat(value, 64)
-		return v, err
+		if v, err := strconv.ParseFloat(value, 64); err != nil {
+			return nil, fmt.Errorf("invalid parse float: %w", err)
+		} else {
+			return v, nil
+		}
 	default:
 		return nil, collector.ErrInvalidMetricType
 	}
 }
 
-func GetListMetrics(w http.ResponseWriter, r *http.Request) {
+func GetListMetrics(w http.ResponseWriter, _ *http.Request) {
 	metrics := Storage.GetAllMetrics()
 
 	w.Header().Set("Content-Type", "text/html")
@@ -49,7 +56,9 @@ func GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
+
 	message := fmt.Sprintf("%v\n", value)
+
 	if _, err := w.Write([]byte(message)); err != nil {
 		panic(err)
 	}

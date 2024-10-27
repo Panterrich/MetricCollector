@@ -6,9 +6,10 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/go-resty/resty/v2"
+
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/metrics"
-	"github.com/go-resty/resty/v2"
 )
 
 type MemRuntimeStat struct {
@@ -16,7 +17,7 @@ type MemRuntimeStat struct {
 	Getter func(m *runtime.MemStats) any
 }
 
-var MemRuntimeStats []MemRuntimeStat = []MemRuntimeStat{
+var MemRuntimeStats = []MemRuntimeStat{
 	{
 		Name:   "Alloc",
 		Getter: func(m *runtime.MemStats) any { return m.Alloc },
@@ -129,6 +130,7 @@ var MemRuntimeStats []MemRuntimeStat = []MemRuntimeStat{
 
 func UpdateAllMetrics(storage collector.Collector) {
 	var memStats runtime.MemStats
+
 	runtime.ReadMemStats(&memStats)
 
 	for _, v := range MemRuntimeStats {
@@ -155,15 +157,15 @@ func ReportMetric(metric metrics.Metric, client *resty.Client, serverAddress str
 		if !ok {
 			return
 		}
-		value = strconv.FormatInt(val, 10)
 
+		value = strconv.FormatInt(val, 10)
 	case metrics.TypeMetricGauge:
 		val, ok := metric.Value().(float64)
 		if !ok {
 			return
 		}
-		value = strconv.FormatFloat(val, 'f', -1, 64)
 
+		value = strconv.FormatFloat(val, 'f', -1, 64)
 	default:
 		fmt.Println("unknown type")
 		return

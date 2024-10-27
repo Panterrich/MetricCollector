@@ -1,19 +1,23 @@
-package metrics
+package metrics_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/Panterrich/MetricCollector/internal/metrics"
 )
 
 func TestGauge(t *testing.T) {
 	type fields struct {
 		name string
 	}
+
 	type args struct {
 		value any
 		want  bool
 	}
+
 	tests := []struct {
 		name     string
 		fields   fields
@@ -39,9 +43,10 @@ func TestGauge(t *testing.T) {
 			expected: float64(5.0),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := NewGauge(tt.fields.name)
+			g := metrics.NewGauge(tt.fields.name)
 
 			for _, args := range tt.args {
 				assert.Equal(t, args.want, g.Update(args.value))
@@ -49,7 +54,7 @@ func TestGauge(t *testing.T) {
 
 			assert.Equal(t, tt.expected, g.Value())
 			assert.Equal(t, tt.fields.name, g.Name())
-			assert.Equal(t, TypeMetricGauge, g.Type())
+			assert.Equal(t, metrics.TypeMetricGauge, g.Type())
 		})
 	}
 }
