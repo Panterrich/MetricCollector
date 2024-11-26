@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
@@ -49,6 +50,45 @@ func GetListMetrics(w http.ResponseWriter, _ *http.Request) {
 }
 
 func GetMetric(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "metricType")
+	metricName := chi.URLParam(r, "metricName")
+
+	value, err := Storage.GetMetric(metricType, metricName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("metric %s not found", metricName), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+
+	message := fmt.Sprintf("%v\n", value)
+
+	if _, err := w.Write([]byte(message)); err != nil {
+		panic(err)
+	}
+}
+
+func UpdateMetric(w http.ResponseWriter, r *http.Request) {
+	metricType := chi.URLParam(r, "metricType")
+	metricName := chi.URLParam(r, "metricName")
+	metricValue := chi.URLParam(r, "metricValue")
+
+	value, err := ConvertByType(metricType, metricValue)
+	if err != nil {
+		http.Error(w, "invalid value of metric", http.StatusBadRequest)
+		return
+	}
+
+	err = Storage.UpdateMetric(metricType, metricName, value)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid update metric %s: %v", metricName, err), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func GetMetricJson(w http.ResponseWriter, r *http.Request) {
 	var metric handlers.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
@@ -77,7 +117,7 @@ func GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func UpdateMetric(w http.ResponseWriter, r *http.Request) {
+func UpdateMetricJson(w http.ResponseWriter, r *http.Request) {
 	var metric handlers.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
