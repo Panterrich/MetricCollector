@@ -1,11 +1,14 @@
 package server
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type (
 	responseData struct {
 		status int
 		size   int
+		data   string
 	}
 
 	loggingResponseWriter struct {
@@ -18,6 +21,7 @@ type (
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
+	r.responseData.data = string(b)
 
 	return size, err
 }

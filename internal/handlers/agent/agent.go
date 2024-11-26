@@ -25,111 +25,111 @@ type MemRuntimeStat struct {
 var MemRuntimeStats = []MemRuntimeStat{
 	{
 		Name:   "Alloc",
-		Getter: func(m *runtime.MemStats) any { return m.Alloc },
+		Getter: func(m *runtime.MemStats) any { return float64(m.Alloc) },
 	},
 	{
 		Name:   "BuckHashSys",
-		Getter: func(m *runtime.MemStats) any { return m.BuckHashSys },
+		Getter: func(m *runtime.MemStats) any { return float64(m.BuckHashSys) },
 	},
 	{
 		Name:   "Frees",
-		Getter: func(m *runtime.MemStats) any { return m.Frees },
+		Getter: func(m *runtime.MemStats) any { return float64(m.Frees) },
 	},
 	{
 		Name:   "GCCPUFraction",
-		Getter: func(m *runtime.MemStats) any { return m.GCCPUFraction },
+		Getter: func(m *runtime.MemStats) any { return float64(m.GCCPUFraction) },
 	},
 	{
 		Name:   "GCSys",
-		Getter: func(m *runtime.MemStats) any { return m.GCSys },
+		Getter: func(m *runtime.MemStats) any { return float64(m.GCSys) },
 	},
 	{
 		Name:   "HeapAlloc",
-		Getter: func(m *runtime.MemStats) any { return m.HeapAlloc },
+		Getter: func(m *runtime.MemStats) any { return float64(m.HeapAlloc) },
 	},
 	{
 		Name:   "HeapIdle",
-		Getter: func(m *runtime.MemStats) any { return m.HeapIdle },
+		Getter: func(m *runtime.MemStats) any { return float64(m.HeapIdle) },
 	},
 	{
 		Name:   "HeapInuse",
-		Getter: func(m *runtime.MemStats) any { return m.HeapInuse },
+		Getter: func(m *runtime.MemStats) any { return float64(m.HeapInuse) },
 	},
 	{
 		Name:   "HeapObjects",
-		Getter: func(m *runtime.MemStats) any { return m.HeapObjects },
+		Getter: func(m *runtime.MemStats) any { return float64(m.HeapObjects) },
 	},
 	{
 		Name:   "HeapReleased",
-		Getter: func(m *runtime.MemStats) any { return m.HeapReleased },
+		Getter: func(m *runtime.MemStats) any { return float64(m.HeapReleased) },
 	},
 	{
 		Name:   "HeapSys",
-		Getter: func(m *runtime.MemStats) any { return m.HeapSys },
+		Getter: func(m *runtime.MemStats) any { return float64(m.HeapSys) },
 	},
 	{
 		Name:   "LastGC",
-		Getter: func(m *runtime.MemStats) any { return m.LastGC },
+		Getter: func(m *runtime.MemStats) any { return float64(m.LastGC) },
 	},
 	{
 		Name:   "Lookups",
-		Getter: func(m *runtime.MemStats) any { return m.Lookups },
+		Getter: func(m *runtime.MemStats) any { return float64(m.Lookups) },
 	},
 	{
 		Name:   "MCacheInuse",
-		Getter: func(m *runtime.MemStats) any { return m.MCacheInuse },
+		Getter: func(m *runtime.MemStats) any { return float64(m.MCacheInuse) },
 	},
 	{
 		Name:   "MCacheSys",
-		Getter: func(m *runtime.MemStats) any { return m.MCacheSys },
+		Getter: func(m *runtime.MemStats) any { return float64(m.MCacheSys) },
 	},
 	{
 		Name:   "MSpanInuse",
-		Getter: func(m *runtime.MemStats) any { return m.MSpanInuse },
+		Getter: func(m *runtime.MemStats) any { return float64(m.MSpanInuse) },
 	},
 	{
 		Name:   "MSpanSys",
-		Getter: func(m *runtime.MemStats) any { return m.MSpanSys },
+		Getter: func(m *runtime.MemStats) any { return float64(m.MSpanSys) },
 	},
 	{
 		Name:   "Mallocs",
-		Getter: func(m *runtime.MemStats) any { return m.Mallocs },
+		Getter: func(m *runtime.MemStats) any { return float64(m.Mallocs) },
 	},
 	{
 		Name:   "NextGC",
-		Getter: func(m *runtime.MemStats) any { return m.NextGC },
+		Getter: func(m *runtime.MemStats) any { return float64(m.NextGC) },
 	},
 	{
 		Name:   "NumForcedGC",
-		Getter: func(m *runtime.MemStats) any { return m.NumForcedGC },
+		Getter: func(m *runtime.MemStats) any { return float64(m.NumForcedGC) },
 	},
 	{
 		Name:   "NumGC",
-		Getter: func(m *runtime.MemStats) any { return m.NumGC },
+		Getter: func(m *runtime.MemStats) any { return float64(m.NumGC) },
 	},
 	{
 		Name:   "OtherSys",
-		Getter: func(m *runtime.MemStats) any { return m.OtherSys },
+		Getter: func(m *runtime.MemStats) any { return float64(m.OtherSys) },
 	},
 	{
 		Name:   "PauseTotalNs",
-		Getter: func(m *runtime.MemStats) any { return m.PauseTotalNs },
+		Getter: func(m *runtime.MemStats) any { return float64(m.PauseTotalNs) },
 	},
 	{
 		Name:   "StackInuse",
-		Getter: func(m *runtime.MemStats) any { return m.StackInuse },
+		Getter: func(m *runtime.MemStats) any { return float64(m.StackInuse) },
 	},
 	{
 		Name:   "StackSys",
-		Getter: func(m *runtime.MemStats) any { return m.StackSys },
+		Getter: func(m *runtime.MemStats) any { return float64(m.StackSys) },
 	},
 	{
 		Name:   "Sys",
-		Getter: func(m *runtime.MemStats) any { return m.Sys },
+		Getter: func(m *runtime.MemStats) any { return float64(m.Sys) },
 	},
 	{
 		Name:   "TotalAlloc",
-		Getter: func(m *runtime.MemStats) any { return m.TotalAlloc },
+		Getter: func(m *runtime.MemStats) any { return float64(m.TotalAlloc) },
 	},
 }
 
@@ -142,7 +142,7 @@ func UpdateAllMetrics(storage collector.Collector) {
 		storage.UpdateMetric(metrics.TypeMetricGauge, v.Name, v.Getter(&memStats))
 	}
 
-	storage.UpdateMetric(metrics.TypeMetricCounter, "PollCount", 1)
+	storage.UpdateMetric(metrics.TypeMetricCounter, "PollCount", int64(1))
 	storage.UpdateMetric(metrics.TypeMetricGauge, "RandomValue", rand.Float64())
 }
 
@@ -181,31 +181,37 @@ func ReportMetric(metric metrics.Metric, client *resty.Client, serverAddress str
 
 	backoffScheduler := &backoff.Backoff{
 		Jitter: true,
+		Max:    1 * time.Second,
 	}
+
+	var (
+		resp *resty.Response
+		err  error
+	)
 
 	for {
 		if backoffScheduler.Attempt() == MaxAttempts {
 			return
 		}
 
-		resp, err := client.R().
+		resp, err = client.R().
 			SetBody(value).
 			SetPathParams(map[string]string{
 				"address": serverAddress,
 			}).Post("http://{address}/update/")
 
-		if err != nil {
-			d := backoffScheduler.Duration()
-
-			log.Info().
-				Err(err).
-				Dur("time reconnecting", d).
-				Send()
-			time.Sleep(d)
-
-			continue
+		if err == nil {
+			break
 		}
 
-		fmt.Println(resp, err)
+		d := backoffScheduler.Duration()
+
+		log.Info().
+			Err(err).
+			Dur("time reconnecting", d).
+			Send()
+		time.Sleep(d)
 	}
+
+	fmt.Println(resp, err)
 }
