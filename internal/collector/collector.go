@@ -3,7 +3,7 @@ package collector
 import (
 	"errors"
 
-	"github.com/Panterrich/MetricCollector/internal/metrics"
+	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
 type Collector interface {
