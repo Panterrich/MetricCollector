@@ -83,8 +83,8 @@ func run(_ *cobra.Command, _ []string) error {
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", server.GetListMetrics)
 		r.Route("/", func(r chi.Router) {
-			r.Post("/value", server.GetMetricJson)
-			r.Post("/update", server.UpdateMetricJson)
+			r.Post("/value", server.GetMetricJSON)
+			r.Post("/update", server.UpdateMetricJSON)
 			r.Get("/value/{metricType}/{metricName}", server.GetMetric)
 			r.Post("/update/{metricType}/{metricName}/{metricValue}", server.UpdateMetric)
 		})

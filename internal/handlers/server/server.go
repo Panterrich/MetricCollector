@@ -88,7 +88,7 @@ func UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func GetMetricJson(w http.ResponseWriter, r *http.Request) {
+func GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var metric handlers.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
@@ -117,7 +117,7 @@ func GetMetricJson(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func UpdateMetricJson(w http.ResponseWriter, r *http.Request) {
+func UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 	var metric handlers.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
