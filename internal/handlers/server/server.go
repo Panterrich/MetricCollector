@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
@@ -32,7 +32,7 @@ func ConvertByType(metric, value string) (any, error) {
 			return v, nil
 		}
 	default:
-		return nil, collector.ErrInvalidMetricType
+		return nil, fmt.Errorf("%w: %s", collector.ErrInvalidMetricType, metric)
 	}
 }
 
@@ -75,7 +75,7 @@ func UpdateMetric(w http.ResponseWriter, r *http.Request) {
 
 	value, err := ConvertByType(metricType, metricValue)
 	if err != nil {
-		http.Error(w, "invalid value of metric", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("invalid value of metric: %v", err), http.StatusBadRequest)
 		return
 	}
 
