@@ -9,8 +9,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
-	"github.com/Panterrich/MetricCollector/internal/handlers"
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
+	"github.com/Panterrich/MetricCollector/pkg/serialization"
 )
 
 var Storage collector.Collector
@@ -87,7 +87,7 @@ func UpdateMetric(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetMetricJSON(w http.ResponseWriter, r *http.Request) {
-	var metric handlers.Metrics
+	var metric serialization.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
 		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusBadRequest)
@@ -116,7 +116,7 @@ func GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
-	var metric handlers.Metrics
+	var metric serialization.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
 		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusBadRequest)

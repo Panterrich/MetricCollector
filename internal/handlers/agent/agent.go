@@ -11,8 +11,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
-	"github.com/Panterrich/MetricCollector/internal/handlers"
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
+	"github.com/Panterrich/MetricCollector/pkg/serialization"
 )
 
 const MaxAttempts = 10
@@ -154,7 +154,7 @@ func ReportAllMetrics(storage collector.Collector, client *resty.Client, serverA
 }
 
 func ReportMetric(metric metrics.Metric, client *resty.Client, serverAddress string) {
-	value := handlers.Metrics{
+	value := serialization.Metrics{
 		ID:    metric.Name(),
 		MType: metric.Type(),
 	}

@@ -1,4 +1,4 @@
-package handlers
+package serialization
 
 type Metrics struct {
 	ID    string   `json:"id"`
