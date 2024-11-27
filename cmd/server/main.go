@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/caarlos0/env"
-	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -109,7 +108,6 @@ func run(_ *cobra.Command, _ []string) error {
 
 	r.Use(server.WithLogging)
 	r.Use(server.WithGzipCompression)
-	r.Use(middleware.Recoverer)
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", server.GetListMetrics)
@@ -136,6 +134,7 @@ func run(_ *cobra.Command, _ []string) error {
 	}
 
 	stop := make(chan struct{})
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)

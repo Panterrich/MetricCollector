@@ -2,6 +2,7 @@ package serialization
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -11,6 +12,10 @@ import (
 
 func Load(collector collector.Collector, path string) error {
 	text, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
 	if err != nil {
 		return fmt.Errorf("can't read file %s: %w", path, err)
 	}
