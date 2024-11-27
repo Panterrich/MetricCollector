@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/handlers"
@@ -158,34 +156,4 @@ func UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusInternalServerError)
 		return
 	}
-}
-
-func WithLogging(h http.Handler) http.Handler {
-	logFn := func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		responseData := &responseData{
-			status: 0,
-			size:   0,
-		}
-		lw := &loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   responseData,
-		}
-
-		h.ServeHTTP(lw, r)
-
-		duration := time.Since(start)
-
-		log.Info().
-			Str("uri", r.RequestURI).
-			Str("method", r.Method).
-			Int("status", responseData.status).
-			Dur("duration", duration).
-			Int("size", responseData.size).
-			Str("data", responseData.data).
-			Msg("new request")
-	}
-
-	return http.HandlerFunc(logFn)
 }

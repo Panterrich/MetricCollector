@@ -78,6 +78,7 @@ func run(_ *cobra.Command, _ []string) error {
 	r := chi.NewRouter()
 
 	r.Use(server.WithLogging)
+	r.Use(server.WithGzipCompression)
 	r.Use(middleware.Recoverer)
 
 	r.Route("/", func(r chi.Router) {
