@@ -3,7 +3,7 @@ package collector
 import (
 	"sync"
 
-	"github.com/Panterrich/MetricCollector/internal/metrics"
+	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
 type MemStorage struct {

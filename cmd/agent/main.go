@@ -87,8 +87,8 @@ func run(_ *cobra.Command, _ []string) error {
 	client := resty.New()
 	serverAddress := cfg.EndPoint
 
-	reportTimer := time.NewTicker(time.Duration(cfg.ReportInterval))
-	pollTimer := time.NewTicker(time.Duration(cfg.PollInterval))
+	reportTimer := time.NewTicker(time.Duration(cfg.ReportInterval) * time.Second)
+	pollTimer := time.NewTicker(time.Duration(cfg.PollInterval) * time.Second)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
