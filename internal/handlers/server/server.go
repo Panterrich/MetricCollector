@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -8,7 +9,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
-	"github.com/Panterrich/MetricCollector/internal/metrics"
+	"github.com/Panterrich/MetricCollector/internal/handlers"
+	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
 var Storage collector.Collector
@@ -28,7 +30,7 @@ func ConvertByType(metric, value string) (any, error) {
 			return v, nil
 		}
 	default:
-		return nil, collector.ErrInvalidMetricType
+		return nil, fmt.Errorf("%w: %s", collector.ErrInvalidMetricType, metric)
 	}
 }
 
@@ -71,7 +73,7 @@ func UpdateMetric(w http.ResponseWriter, r *http.Request) {
 
 	value, err := ConvertByType(metricType, metricValue)
 	if err != nil {
-		http.Error(w, "invalid value of metric", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("invalid value of metric: %v", err), http.StatusBadRequest)
 		return
 	}
 
@@ -82,4 +84,76 @@ func UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func GetMetricJSON(w http.ResponseWriter, r *http.Request) {
+	var metric handlers.Metrics
+
+	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
+		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	value, err := Storage.GetMetric(metric.MType, metric.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("metric %s not found", metric.ID), http.StatusNotFound)
+		return
+	}
+
+	if val, ok := value.(int64); ok {
+		metric.Delta = &val
+	} else if val, ok := value.(float64); ok {
+		metric.Value = &val
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(&metric)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
+func UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
+	var metric handlers.Metrics
+
+	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
+		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	var value any
+
+	if metric.MType == metrics.TypeMetricCounter {
+		value = *metric.Delta
+	} else {
+		value = *metric.Value
+	}
+
+	err := Storage.UpdateMetric(metric.MType, metric.ID, value)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid update metric %s: %v", metric.ID, err), http.StatusBadRequest)
+		return
+	}
+
+	newValue, err := Storage.GetMetric(metric.MType, metric.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("metric %s not found", metric.ID), http.StatusNotFound)
+		return
+	}
+
+	if val, ok := newValue.(int64); ok {
+		metric.Delta = &val
+	} else if val, ok := newValue.(float64); ok {
+		metric.Value = &val
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(&metric)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
