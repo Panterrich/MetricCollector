@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/caarlos0/env"
 	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -25,6 +27,7 @@ var (
 	DefaultStoreInterval   uint = 300
 	DefaultFileStoragePath      = ""
 	DefaultRestore              = true
+	DefaultDatabaseDsn          = ""
 )
 
 type Config struct {
@@ -33,6 +36,7 @@ type Config struct {
 	StoreInterval   uint   `env:"STORE_INTERVAL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
+	DatabaseDsn     string `env:"DATABASE_DSN"`
 }
 
 var (
@@ -68,6 +72,7 @@ func init() {
 	root.Flags().UintVarP(&cfg.StoreInterval, "i", "i", DefaultStoreInterval, "store interval")
 	root.Flags().StringVarP(&cfg.FileStoragePath, "f", "f", DefaultFileStoragePath, "file storage path")
 	root.Flags().BoolVarP(&cfg.Restore, "r", "r", DefaultRestore, "restore")
+	root.Flags().StringVarP(&cfg.DatabaseDsn, "d", "d", DefaultDatabaseDsn, "database dsn")
 }
 
 func preRun(_ *cobra.Command, _ []string) {
@@ -90,6 +95,10 @@ func preRun(_ *cobra.Command, _ []string) {
 	if cfgEnv.Restore {
 		cfg.Restore = cfgEnv.Restore
 	}
+
+	if cfgEnv.DatabaseDsn != "" {
+		cfg.DatabaseDsn = cfgEnv.DatabaseDsn
+	}
 }
 
 func run(_ *cobra.Command, _ []string) error {
@@ -104,6 +113,12 @@ func run(_ *cobra.Command, _ []string) error {
 		}
 	}
 
+	db, err := sql.Open("pgx", cfg.DatabaseDsn)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
 	r := chi.NewRouter()
 
 	r.Use(server.WithLogging)
@@ -112,6 +127,7 @@ func run(_ *cobra.Command, _ []string) error {
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", server.GetListMetrics)
 		r.Route("/", func(r chi.Router) {
+			r.Get("/ping", server.WithDatabase(db, server.PingDatabase))
 			r.Route("/value", func(r chi.Router) {
 				r.Post("/", server.GetMetricJSON)
 				r.Get("/{metricType}/{metricName}", server.GetMetric)
@@ -145,7 +161,7 @@ func run(_ *cobra.Command, _ []string) error {
 		for {
 			select {
 			case <-backupTimer.C:
-				if err := serialization.Save(&storage, cfg.FileStoragePath); err != nil {
+				if err = serialization.Save(&storage, cfg.FileStoragePath); err != nil {
 					log.Error().Msgf("can't save database: %v", err)
 				}
 			case <-stop:
@@ -154,7 +170,7 @@ func run(_ *cobra.Command, _ []string) error {
 		}
 	}()
 
-	err := http.ListenAndServe(cfg.EndPoint, r)
+	err = http.ListenAndServe(cfg.EndPoint, r)
 	if err != nil {
 		return fmt.Errorf("http server internal error: %w", err)
 	}
