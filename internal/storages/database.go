@@ -134,6 +134,10 @@ func (d *Database) GetAllMetrics(ctx context.Context) []metrics.Metric {
 		m = append(m, metric)
 	}
 
+	if rows.Err() != nil {
+		return nil
+	}
+
 	metrics, err := serialization.ConvertToMetrics(m)
 	if err != nil {
 		return nil
