@@ -16,7 +16,7 @@ import (
 	"github.com/Panterrich/MetricCollector/pkg/serialization"
 )
 
-const MaxAttempts = 10
+const MaxAttempts = 3
 
 type MemRuntimeStat struct {
 	Name   string
@@ -160,8 +160,9 @@ func ReportAllMetrics(ctx context.Context, storage collector.Collector, client *
 	}
 
 	backoffScheduler := &backoff.Backoff{
-		Jitter: true,
-		Max:    1 * time.Second,
+		Min:    1 * time.Second,
+		Max:    5 * time.Second,
+		Factor: 3,
 	}
 
 	var resp *resty.Response
