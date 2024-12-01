@@ -179,7 +179,7 @@ func ReportAllMetrics(ctx context.Context, storage collector.Collector, client *
 			SetBody(values).
 			SetPathParams(map[string]string{
 				"address": serverAddress,
-			}).Post("http://{address}/update/")
+			}).Post("http://{address}/updates/")
 
 		if err == nil {
 			break
