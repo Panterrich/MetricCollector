@@ -29,12 +29,12 @@ func NewDatabase(ctx context.Context, dp DatabaseParams) (collector.Collector, e
 	}
 
 	_, err = db.ExecContext(ctx,
-		"CREATE TABLE IF NOT EXISTS metriccollector ( "+
+		"CREATE TABLE IF NOT EXISTS metriccollector ("+
 			"\"id\" VARCHAR(250) PRIMARY KEY, "+
 			"\"type\" TEXT, "+
 			"\"delta\" INTEGER, "+
-			"\"value\" DOUBLE PRECISION "+
-			")")
+			"\"value\" DOUBLE PRECISION"+
+			");")
 	if err != nil {
 		db.Close()
 		return nil, fmt.Errorf("exec context: %w", err)
@@ -52,7 +52,7 @@ func (d *Database) GetMetric(ctx context.Context, kind, name string) (any, error
 
 	row := d.DB.QueryRowContext(ctx,
 		"SELECT id, type, delta, value FROM metriccollector "+
-			"WHERE id = ? AND type = ? LIMIT 1", name, kind)
+			"WHERE id = $1 AND type = $2 LIMIT 1", name, kind)
 
 	var (
 		id    string
@@ -161,16 +161,13 @@ func (d *Database) UpdateMetric(ctx context.Context, kind, name string, value an
 	}
 
 	_, err = d.DB.ExecContext(ctx,
-		"INSERT INTO metricccolector (id, type, delta, value) "+
-			"VALUES (@id, @type, @delta, @value) "+
+		"INSERT INTO metriccollector (id, type, delta, value) "+
+			"VALUES ($1, $2, $3, $4) "+
 			"ON CONFLICT(id) "+
 			"DO UPDATE SET "+
 			"delta = EXCLUDED.delta, "+
 			"value = EXCLUDED.value;",
-		sql.Named("id", metric.ID),
-		sql.Named("type", metric.MType),
-		sql.Named("delta", metric.Delta),
-		sql.Named("value", metric.Val))
+		metric.ID, metric.MType, metric.Delta, metric.Val)
 	if err != nil {
 		return fmt.Errorf("database insert into mettriccollector: %w", err)
 	}
@@ -192,8 +189,8 @@ func (d *Database) UpdateMetrics(ctx context.Context, m []metrics.Metric) error 
 	}
 
 	stmt, err := d.DB.PrepareContext(ctx,
-		"INSERT INTO metricccolector (id, type, delta, value) "+
-			"VALUES (@id, @type, @delta, @value) "+
+		"INSERT INTO metriccollector (id, type, delta, value) "+
+			"VALUES ($1, $2, $3, $4) "+
 			"ON CONFLICT(id) "+
 			"DO UPDATE SET "+
 			"delta = EXCLUDED.delta, "+
@@ -215,11 +212,7 @@ func (d *Database) UpdateMetrics(ctx context.Context, m []metrics.Metric) error 
 			return fmt.Errorf("metric set value: %w", err)
 		}
 
-		_, err = stmt.ExecContext(ctx,
-			sql.Named("id", jsonMetric.ID),
-			sql.Named("type", jsonMetric.MType),
-			sql.Named("delta", jsonMetric.Delta),
-			sql.Named("value", jsonMetric.Val))
+		_, err = stmt.ExecContext(ctx, jsonMetric.ID, jsonMetric.MType, jsonMetric.Delta, jsonMetric.Val)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("stmt exec context: %w", err)

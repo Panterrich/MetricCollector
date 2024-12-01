@@ -113,8 +113,8 @@ func run(_ *cobra.Command, _ []string) error {
 
 	r := chi.NewRouter()
 
-	r.Use(server.WithLogging)
 	r.Use(server.WithGzipCompression)
+	r.Use(server.WithLogging)
 
 	r.Route("/", func(r chi.Router) {
 		r.Get("/", server.WithCollector(c, server.GetListMetrics))
