@@ -29,7 +29,7 @@ func NewDatabase(ctx context.Context, dp DatabaseParams) (collector.Collector, e
 	}
 
 	_, err = db.ExecContext(ctx,
-		"CREATE TABLE metriccollector ( "+
+		"CREATE TABLE IF NOT EXISTS metriccollector ( "+
 			"\"id\" VARCHAR(250) PRIMARY KEY, "+
 			"\"type\" TEXT, "+
 			"\"delta\" INTEGER, "+
