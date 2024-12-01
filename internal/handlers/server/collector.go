@@ -76,7 +76,7 @@ func UpdateMetric(c collector.Collector, w http.ResponseWriter, r *http.Request)
 }
 
 func GetMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Request) {
-	var metric serialization.Metrics
+	var metric serialization.Metric
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
 		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusBadRequest)
@@ -104,7 +104,7 @@ func GetMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Request
 }
 
 func UpdateMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Request) {
-	var metric serialization.Metrics
+	var metric serialization.Metric
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
 		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusBadRequest)
@@ -145,7 +145,7 @@ func UpdateMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Requ
 }
 
 func UpdateMetricsJSON(c collector.Collector, w http.ResponseWriter, r *http.Request) {
-	var jsonMetrics []serialization.Metrics
+	var jsonMetrics []serialization.Metric
 
 	if err := json.NewDecoder(r.Body).Decode(&jsonMetrics); err != nil {
 		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusBadRequest)

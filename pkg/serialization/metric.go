@@ -5,14 +5,14 @@ import (
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
-type Metrics struct {
+type Metric struct {
 	ID    string   `json:"id"`
 	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
-	Value *float64 `json:"value,omitempty"`
+	Val   *float64 `json:"value,omitempty"`
 }
 
-func (m *Metrics) GetValue() (any, error) {
+func (m *Metric) GetValue() (any, error) {
 	switch m.MType {
 	case metrics.TypeMetricCounter:
 		if m.Delta == nil {
@@ -22,18 +22,18 @@ func (m *Metrics) GetValue() (any, error) {
 		return *m.Delta, nil
 
 	case metrics.TypeMetricGauge:
-		if m.Value == nil {
+		if m.Val == nil {
 			return nil, collector.ErrMetricNotFound
 		}
 
-		return *m.Value, nil
+		return *m.Val, nil
 
 	default:
 		return nil, collector.ErrInvalidMetricType
 	}
 }
 
-func (m *Metrics) SetValue(value any) error {
+func (m *Metric) SetValue(value any) error {
 	switch m.MType {
 	case metrics.TypeMetricCounter:
 		val, ok := value.(int64)
@@ -50,7 +50,7 @@ func (m *Metrics) SetValue(value any) error {
 			return collector.ErrUpdateMetric
 		}
 
-		m.Value = &val
+		m.Val = &val
 
 		return nil
 	default:

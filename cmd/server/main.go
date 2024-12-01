@@ -150,7 +150,7 @@ func NewCollector(ctx context.Context, cfg Config) (collector.Collector, error) 
 
 	switch {
 	case cfg.DatabaseDsn != "":
-		c, err = storages.NewDatabase(storages.DatabaseParams{
+		c, err = storages.NewDatabase(ctx, storages.DatabaseParams{
 			DatabaseDsn: cfg.DatabaseDsn,
 		})
 	case cfg.FileStoragePath != "":

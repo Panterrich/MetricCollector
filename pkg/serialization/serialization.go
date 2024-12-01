@@ -21,7 +21,7 @@ func Load(ctx context.Context, c collector.Collector, path string) error {
 		return fmt.Errorf("can't read file %s: %w", path, err)
 	}
 
-	var data []Metrics
+	var data []Metric
 
 	err = json.Unmarshal(text, &data)
 	if err != nil {
@@ -37,7 +37,7 @@ func Load(ctx context.Context, c collector.Collector, path string) error {
 		}
 
 		if metric.MType == metrics.TypeMetricGauge {
-			err := c.UpdateMetric(ctx, metric.MType, metric.ID, *metric.Value)
+			err := c.UpdateMetric(ctx, metric.MType, metric.ID, *metric.Val)
 			if err != nil {
 				return fmt.Errorf("update metric error: %w", err)
 			}
@@ -50,10 +50,10 @@ func Load(ctx context.Context, c collector.Collector, path string) error {
 func Save(ctx context.Context, c collector.Collector, path string) error {
 	allMetrics := c.GetAllMetrics(ctx)
 
-	data := make([]Metrics, 0, len(allMetrics))
+	data := make([]Metric, 0, len(allMetrics))
 
 	for _, metric := range allMetrics {
-		var newMetric Metrics
+		var newMetric Metric
 
 		newMetric.ID = metric.Name()
 		newMetric.MType = metric.Type()
@@ -73,7 +73,7 @@ func Save(ctx context.Context, c collector.Collector, path string) error {
 				return fmt.Errorf("invalid type metric")
 			}
 
-			newMetric.Value = &val
+			newMetric.Val = &val
 		}
 
 		data = append(data, newMetric)

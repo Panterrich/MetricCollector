@@ -27,7 +27,7 @@ func ConvertByType(metric, value string) (any, error) {
 	}
 }
 
-func ConvertToMetrics(jsonMetrics []Metrics) ([]metrics.Metric, error) {
+func ConvertToMetrics(jsonMetrics []Metric) ([]metrics.Metric, error) {
 	m := make([]metrics.Metric, 0, len(jsonMetrics))
 
 	for _, jsonMetric := range jsonMetrics {
@@ -42,12 +42,12 @@ func ConvertToMetrics(jsonMetrics []Metrics) ([]metrics.Metric, error) {
 			m = append(m, metric)
 
 		case metrics.TypeMetricGauge:
-			if jsonMetric.Value == nil {
+			if jsonMetric.Val == nil {
 				return nil, collector.ErrMetricNotFound
 			}
 
 			metric := metrics.NewGauge(jsonMetric.ID)
-			metric.Update(*jsonMetric.Value)
+			metric.Update(*jsonMetric.Val)
 			m = append(m, metric)
 
 		default:
@@ -58,11 +58,11 @@ func ConvertToMetrics(jsonMetrics []Metrics) ([]metrics.Metric, error) {
 	return m, nil
 }
 
-func ConvertToJSONMetrics(m []metrics.Metric) ([]Metrics, error) {
-	jsonMetrics := make([]Metrics, 0, len(m))
+func ConvertToJSONMetrics(m []metrics.Metric) ([]Metric, error) {
+	jsonMetrics := make([]Metric, 0, len(m))
 
 	for _, metric := range m {
-		jsonMetric := Metrics{
+		jsonMetric := Metric{
 			ID:    metric.Name(),
 			MType: metric.Type(),
 		}
