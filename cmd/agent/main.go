@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -13,8 +15,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
-	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/handlers/agent"
+	"github.com/Panterrich/MetricCollector/internal/storages"
 )
 
 var (
@@ -79,10 +81,7 @@ func preRun(_ *cobra.Command, _ []string) {
 }
 
 func run(_ *cobra.Command, _ []string) error {
-	var metrics collector.Collector
-
-	storage := collector.NewMemStorage()
-	metrics = &storage
+	storage := storages.NewMemory()
 
 	client := resty.New()
 	serverAddress := cfg.EndPoint
@@ -93,16 +92,33 @@ func run(_ *cobra.Command, _ []string) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
-	for {
-		select {
-		case <-stop:
-			return nil
-		case <-reportTimer.C:
-			agent.ReportAllMetrics(metrics, client, serverAddress)
-		case <-pollTimer.C:
-			agent.UpdateAllMetrics(metrics)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-reportTimer.C:
+				agent.ReportAllMetrics(ctx, storage, client, serverAddress)
+			case <-pollTimer.C:
+				agent.UpdateAllMetrics(ctx, storage)
+			}
 		}
-	}
+	}()
+
+	<-stop
+	cancel()
+	wg.Wait()
+
+	return nil
 }
 
 func main() {

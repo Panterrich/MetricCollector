@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"runtime"
@@ -133,27 +134,31 @@ var MemRuntimeStats = []MemRuntimeStat{
 	},
 }
 
-func UpdateAllMetrics(storage collector.Collector) {
+func UpdateAllMetrics(ctx context.Context, storage collector.Collector) {
 	var memStats runtime.MemStats
 
 	runtime.ReadMemStats(&memStats)
 
 	for _, v := range MemRuntimeStats {
-		storage.UpdateMetric(metrics.TypeMetricGauge, v.Name, v.Getter(&memStats))
+		storage.UpdateMetric(ctx, metrics.TypeMetricGauge, v.Name, v.Getter(&memStats))
 	}
 
-	storage.UpdateMetric(metrics.TypeMetricCounter, "PollCount", int64(1))
-	storage.UpdateMetric(metrics.TypeMetricGauge, "RandomValue", rand.Float64())
+	storage.UpdateMetric(ctx, metrics.TypeMetricCounter, "PollCount", int64(1))
+	storage.UpdateMetric(ctx, metrics.TypeMetricGauge, "RandomValue", rand.Float64())
 }
 
-func ReportAllMetrics(storage collector.Collector, client *resty.Client, serverAddress string) {
-	metrics := storage.GetAllMetrics()
+func ReportAllMetrics(ctx context.Context, storage collector.Collector, client *resty.Client, serverAddress string) {
+	metrics := storage.GetAllMetrics(ctx)
 	for _, metric := range metrics {
-		ReportMetric(metric, client, serverAddress)
+		ReportMetric(ctx, metric, client, serverAddress)
+
+		if ctx.Err() != nil {
+			return
+		}
 	}
 }
 
-func ReportMetric(metric metrics.Metric, client *resty.Client, serverAddress string) {
+func ReportMetric(ctx context.Context, metric metrics.Metric, client *resty.Client, serverAddress string) {
 	value := serialization.Metrics{
 		ID:    metric.Name(),
 		MType: metric.Type(),
@@ -190,6 +195,10 @@ func ReportMetric(metric metrics.Metric, client *resty.Client, serverAddress str
 	)
 
 	for {
+		if ctx.Err() != nil {
+			return
+		}
+
 		if backoffScheduler.Attempt() == MaxAttempts {
 			return
 		}

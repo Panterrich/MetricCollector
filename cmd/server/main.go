@@ -1,13 +1,11 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
-	"sync"
-	"time"
 
 	"github.com/caarlos0/env"
 	"github.com/go-chi/chi/v5"
@@ -18,7 +16,7 @@ import (
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/handlers/server"
-	"github.com/Panterrich/MetricCollector/pkg/serialization"
+	"github.com/Panterrich/MetricCollector/internal/storages"
 )
 
 var (
@@ -104,20 +102,14 @@ func preRun(_ *cobra.Command, _ []string) {
 func run(_ *cobra.Command, _ []string) error {
 	zerolog.SetGlobalLevel(zerolog.Level(cfg.LogLevel))
 
-	storage := collector.NewMemStorage()
-	server.Storage = &storage
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	if cfg.Restore && cfg.FileStoragePath != "" {
-		if err := serialization.Load(&storage, cfg.FileStoragePath); err != nil {
-			return fmt.Errorf("can't load database: %w", err)
-		}
-	}
-
-	db, err := sql.Open("pgx", cfg.DatabaseDsn)
+	c, err := NewCollector(ctx, cfg)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("create collector with cfg: %w", err)
 	}
-	defer db.Close()
+	defer c.Close()
 
 	r := chi.NewRouter()
 
@@ -125,62 +117,54 @@ func run(_ *cobra.Command, _ []string) error {
 	r.Use(server.WithGzipCompression)
 
 	r.Route("/", func(r chi.Router) {
-		r.Get("/", server.GetListMetrics)
+		r.Get("/", server.WithCollector(c, server.GetListMetrics))
 		r.Route("/", func(r chi.Router) {
-			r.Get("/ping", server.WithDatabase(db, server.PingDatabase))
+			r.Get("/ping", server.WithDatabase(c, server.PingDatabase))
 			r.Route("/value", func(r chi.Router) {
-				r.Post("/", server.GetMetricJSON)
-				r.Get("/{metricType}/{metricName}", server.GetMetric)
+				r.Post("/", server.WithCollector(c, server.GetMetricJSON))
+				r.Get("/{metricType}/{metricName}", server.WithCollector(c, server.GetMetric))
 			})
 			r.Route("/update", func(r chi.Router) {
-				r.Post("/", server.UpdateMetricJSON)
-				r.Post("/{metricType}/{metricName}/{metricValue}", server.UpdateMetric)
-
-				if cfg.StoreInterval == 0 {
-					r.Use(server.WithBackup(&storage, cfg.FileStoragePath))
-				}
+				r.Post("/", server.WithCollector(c, server.UpdateMetricJSON))
+				r.Post("/{metricType}/{metricName}/{metricValue}", server.WithCollector(c, server.UpdateMetric))
 			})
 		})
 	})
-
-	var backupTimer *time.Ticker
-
-	if cfg.StoreInterval != 0 {
-		backupTimer = time.NewTicker(time.Duration(cfg.StoreInterval) * time.Second)
-	}
-
-	stop := make(chan struct{})
-
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
-		for {
-			select {
-			case <-backupTimer.C:
-				if err = serialization.Save(&storage, cfg.FileStoragePath); err != nil {
-					log.Error().Msgf("can't save database: %v", err)
-				}
-			case <-stop:
-				return
-			}
-		}
-	}()
 
 	err = http.ListenAndServe(cfg.EndPoint, r)
 	if err != nil {
 		return fmt.Errorf("http server internal error: %w", err)
 	}
 
-	stop <- struct{}{}
-
-	backupTimer.Stop()
-	wg.Wait()
-
 	return nil
+}
+
+func NewCollector(ctx context.Context, cfg Config) (collector.Collector, error) {
+	var (
+		c   collector.Collector
+		err error
+	)
+
+	switch {
+	case cfg.DatabaseDsn != "":
+		c, err = storages.NewDatabase(storages.DatabaseParams{
+			DatabaseDsn: cfg.DatabaseDsn,
+		})
+	case cfg.FileStoragePath != "":
+		c, err = storages.NewFile(ctx, storages.FileParams{
+			FilePath:      cfg.FileStoragePath,
+			Restore:       cfg.Restore,
+			StoreInterval: cfg.StoreInterval,
+		})
+	default:
+		c = storages.NewMemory()
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("new collector: %w", err)
+	}
+
+	return c, nil
 }
 
 func main() {

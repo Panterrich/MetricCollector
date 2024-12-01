@@ -1,6 +1,7 @@
 package serialization
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +11,7 @@ import (
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
-func Load(collector collector.Collector, path string) error {
+func Load(ctx context.Context, c collector.Collector, path string) error {
 	text, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
@@ -29,13 +30,15 @@ func Load(collector collector.Collector, path string) error {
 
 	for _, metric := range data {
 		if metric.MType == metrics.TypeMetricCounter {
-			if err := collector.UpdateMetric(metric.MType, metric.ID, *metric.Delta); err != nil {
+			err := c.UpdateMetric(ctx, metric.MType, metric.ID, *metric.Delta)
+			if err != nil {
 				return fmt.Errorf("update metric error: %w", err)
 			}
 		}
 
 		if metric.MType == metrics.TypeMetricGauge {
-			if err := collector.UpdateMetric(metric.MType, metric.ID, *metric.Value); err != nil {
+			err := c.UpdateMetric(ctx, metric.MType, metric.ID, *metric.Value)
+			if err != nil {
 				return fmt.Errorf("update metric error: %w", err)
 			}
 		}
@@ -44,8 +47,8 @@ func Load(collector collector.Collector, path string) error {
 	return nil
 }
 
-func Save(collector collector.Collector, path string) error {
-	allMetrics := collector.GetAllMetrics()
+func Save(ctx context.Context, c collector.Collector, path string) error {
+	allMetrics := c.GetAllMetrics(ctx)
 
 	data := make([]Metrics, 0, len(allMetrics))
 

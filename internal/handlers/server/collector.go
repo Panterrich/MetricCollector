@@ -4,38 +4,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
-
-	"github.com/go-chi/chi/v5"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
 	"github.com/Panterrich/MetricCollector/pkg/serialization"
+	"github.com/go-chi/chi"
 )
 
-var Storage collector.Collector
+type CollectorHandler func(col collector.Collector, w http.ResponseWriter, r *http.Request)
 
-func ConvertByType(metric, value string) (any, error) {
-	switch metric {
-	case metrics.TypeMetricCounter:
-		if v, err := strconv.ParseInt(value, 10, 64); err != nil {
-			return nil, fmt.Errorf("invalid parse int: %w", err)
-		} else {
-			return v, nil
-		}
-	case metrics.TypeMetricGauge:
-		if v, err := strconv.ParseFloat(value, 64); err != nil {
-			return nil, fmt.Errorf("invalid parse float: %w", err)
-		} else {
-			return v, nil
-		}
-	default:
-		return nil, fmt.Errorf("%w: %s", collector.ErrInvalidMetricType, metric)
+func WithCollector(c collector.Collector, next CollectorHandler) http.HandlerFunc {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		next(c, w, r)
 	}
+
+	return http.HandlerFunc(fn)
 }
 
-func GetListMetrics(w http.ResponseWriter, _ *http.Request) {
-	metrics := Storage.GetAllMetrics()
+func GetListMetrics(c collector.Collector, w http.ResponseWriter, r *http.Request) {
+	metrics := c.GetAllMetrics(r.Context())
 
 	w.Header().Set("Content-Type", "text/html")
 
@@ -47,11 +34,11 @@ func GetListMetrics(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func GetMetric(w http.ResponseWriter, r *http.Request) {
+func GetMetric(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 
-	value, err := Storage.GetMetric(metricType, metricName)
+	value, err := c.GetMetric(r.Context(), metricType, metricName)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("metric %s not found", metricName), http.StatusNotFound)
 		return
@@ -66,18 +53,18 @@ func GetMetric(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func UpdateMetric(w http.ResponseWriter, r *http.Request) {
+func UpdateMetric(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 	metricValue := chi.URLParam(r, "metricValue")
 
-	value, err := ConvertByType(metricType, metricValue)
+	value, err := serialization.ConvertByType(metricType, metricValue)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("invalid value of metric: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	err = Storage.UpdateMetric(metricType, metricName, value)
+	err = c.UpdateMetric(r.Context(), metricType, metricName, value)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("invalid update metric %s: %v", metricName, err), http.StatusBadRequest)
 		return
@@ -86,7 +73,7 @@ func UpdateMetric(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func GetMetricJSON(w http.ResponseWriter, r *http.Request) {
+func GetMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	var metric serialization.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
@@ -94,7 +81,7 @@ func GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	value, err := Storage.GetMetric(metric.MType, metric.ID)
+	value, err := c.GetMetric(r.Context(), metric.MType, metric.ID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("metric %s not found", metric.ID), http.StatusNotFound)
 		return
@@ -115,7 +102,7 @@ func GetMetricJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
+func UpdateMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	var metric serialization.Metrics
 
 	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
@@ -131,13 +118,13 @@ func UpdateMetricJSON(w http.ResponseWriter, r *http.Request) {
 		value = *metric.Value
 	}
 
-	err := Storage.UpdateMetric(metric.MType, metric.ID, value)
+	err := c.UpdateMetric(r.Context(), metric.MType, metric.ID, value)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("invalid update metric %s: %v", metric.ID, err), http.StatusBadRequest)
 		return
 	}
 
-	newValue, err := Storage.GetMetric(metric.MType, metric.ID)
+	newValue, err := c.GetMetric(r.Context(), metric.MType, metric.ID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("metric %s not found", metric.ID), http.StatusNotFound)
 		return
