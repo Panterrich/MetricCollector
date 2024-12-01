@@ -2,6 +2,7 @@ package storages
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
@@ -76,6 +77,20 @@ func (m *Memory) UpdateMetric(_ context.Context, kind, name string, value any) e
 
 	if !metric.Update(value) {
 		return collector.ErrUpdateMetric
+	}
+
+	return nil
+}
+
+func (m *Memory) UpdateMetrics(ctx context.Context, metrics []metrics.Metric) error {
+	for _, metric := range metrics {
+		if err := m.UpdateMetric(ctx, metric.Type(), metric.Name(), metric.Value()); err != nil {
+			return fmt.Errorf("file storage update metric: %w", err)
+		}
+
+		if ctx.Err() != nil {
+			return nil
+		}
 	}
 
 	return nil

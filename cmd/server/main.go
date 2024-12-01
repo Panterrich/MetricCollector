@@ -128,6 +128,9 @@ func run(_ *cobra.Command, _ []string) error {
 				r.Post("/", server.WithCollector(c, server.UpdateMetricJSON))
 				r.Post("/{metricType}/{metricName}/{metricValue}", server.WithCollector(c, server.UpdateMetric))
 			})
+			r.Route("/updates", func(r chi.Router) {
+				r.Post("/", server.WithCollector(c, server.UpdateMetricsJSON))
+			})
 		})
 	})
 

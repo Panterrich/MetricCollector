@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/Panterrich/MetricCollector/internal/collector"
-	"github.com/Panterrich/MetricCollector/pkg/metrics"
 	"github.com/Panterrich/MetricCollector/pkg/serialization"
 )
 
@@ -30,7 +29,8 @@ func GetListMetrics(c collector.Collector, w http.ResponseWriter, r *http.Reques
 	for _, metric := range metrics {
 		message := fmt.Sprintf("%10s (%5s): %v\n", metric.Name(), metric.Type(), metric.Value())
 		if _, err := w.Write([]byte(message)); err != nil {
-			panic(err)
+			http.Error(w, fmt.Sprintf("body writer: %v", err), http.StatusInternalServerError)
+			return
 		}
 	}
 }
@@ -50,7 +50,8 @@ func GetMetric(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	message := fmt.Sprintf("%v\n", value)
 
 	if _, err := w.Write([]byte(message)); err != nil {
-		panic(err)
+		http.Error(w, fmt.Sprintf("body writer: %v", err), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -88,10 +89,9 @@ func GetMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if val, ok := value.(int64); ok {
-		metric.Delta = &val
-	} else if val, ok := value.(float64); ok {
-		metric.Value = &val
+	if err = metric.SetValue(value); err != nil {
+		http.Error(w, fmt.Sprintf("metric set value %s: %v", value, err), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -111,15 +111,13 @@ func UpdateMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var value any
-
-	if metric.MType == metrics.TypeMetricCounter {
-		value = *metric.Delta
-	} else {
-		value = *metric.Value
+	value, err := metric.GetValue()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("metric get value: %v", err), http.StatusBadRequest)
+		return
 	}
 
-	err := c.UpdateMetric(r.Context(), metric.MType, metric.ID, value)
+	err = c.UpdateMetric(r.Context(), metric.MType, metric.ID, value)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("invalid update metric %s: %v", metric.ID, err), http.StatusBadRequest)
 		return
@@ -131,10 +129,10 @@ func UpdateMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if val, ok := newValue.(int64); ok {
-		metric.Delta = &val
-	} else if val, ok := newValue.(float64); ok {
-		metric.Value = &val
+	err = metric.SetValue(newValue)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("metric %s not found", metric.ID), http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -144,4 +142,27 @@ func UpdateMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Requ
 		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func UpdateMetricsJSON(c collector.Collector, w http.ResponseWriter, r *http.Request) {
+	var jsonMetrics []serialization.Metrics
+
+	if err := json.NewDecoder(r.Body).Decode(&jsonMetrics); err != nil {
+		http.Error(w, fmt.Sprintf("invalid json body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	metrics, err := serialization.ConvertToMetrics(jsonMetrics)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid convert metrics: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	err = c.UpdateMetrics(r.Context(), metrics)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid update metrics: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

@@ -149,38 +149,13 @@ func UpdateAllMetrics(ctx context.Context, storage collector.Collector) {
 
 func ReportAllMetrics(ctx context.Context, storage collector.Collector, client *resty.Client, serverAddress string) {
 	metrics := storage.GetAllMetrics(ctx)
-	for _, metric := range metrics {
-		ReportMetric(ctx, metric, client, serverAddress)
-
-		if ctx.Err() != nil {
-			return
-		}
-	}
-}
-
-func ReportMetric(ctx context.Context, metric metrics.Metric, client *resty.Client, serverAddress string) {
-	value := serialization.Metrics{
-		ID:    metric.Name(),
-		MType: metric.Type(),
+	if len(metrics) == 0 {
+		return
 	}
 
-	switch metric.Type() {
-	case metrics.TypeMetricCounter:
-		val, ok := metric.Value().(int64)
-		if !ok {
-			return
-		}
-
-		value.Delta = &val
-	case metrics.TypeMetricGauge:
-		val, ok := metric.Value().(float64)
-		if !ok {
-			return
-		}
-
-		value.Value = &val
-	default:
-		log.Error().Msg("unknown type")
+	values, err := serialization.ConvertToJSONMetrics(metrics)
+	if err != nil {
+		log.Info().Err(err).Send()
 		return
 	}
 
@@ -189,10 +164,7 @@ func ReportMetric(ctx context.Context, metric metrics.Metric, client *resty.Clie
 		Max:    1 * time.Second,
 	}
 
-	var (
-		resp *resty.Response
-		err  error
-	)
+	var resp *resty.Response
 
 	for {
 		if ctx.Err() != nil {
@@ -204,7 +176,7 @@ func ReportMetric(ctx context.Context, metric metrics.Metric, client *resty.Clie
 		}
 
 		resp, err = client.R().
-			SetBody(value).
+			SetBody(values).
 			SetPathParams(map[string]string{
 				"address": serverAddress,
 			}).Post("http://{address}/update/")

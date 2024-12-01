@@ -11,6 +11,7 @@ type Collector interface {
 	GetMetric(ctx context.Context, kind, name string) (any, error)
 	GetAllMetrics(ctx context.Context) []metrics.Metric
 	UpdateMetric(ctx context.Context, kind, name string, value any) error
+	UpdateMetrics(ctx context.Context, metrics []metrics.Metric) error
 	Close()
 }
 

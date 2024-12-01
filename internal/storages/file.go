@@ -101,6 +101,29 @@ func (f *File) UpdateMetric(ctx context.Context, kind, name string, value any) e
 	return nil
 }
 
+func (f *File) UpdateMetrics(ctx context.Context, metrics []metrics.Metric) error {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	for _, metric := range metrics {
+		if err := f.storage.UpdateMetric(ctx, metric.Type(), metric.Name(), metric.Value()); err != nil {
+			return fmt.Errorf("file storage update metric: %w", err)
+		}
+
+		if ctx.Err() != nil {
+			return nil
+		}
+	}
+
+	if f.ticker == nil {
+		if err := serialization.Save(ctx, f.storage, f.filePath); err != nil {
+			return fmt.Errorf("file storage save: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func (f *File) Close() {
 	if f.ticker != nil {
 		f.ticker.Stop()
