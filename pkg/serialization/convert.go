@@ -27,49 +27,67 @@ func ConvertByType(metric, value string) (any, error) {
 	}
 }
 
+func ConvertToMetric(jsonMetric Metric) (metrics.Metric, error) {
+	var metric metrics.Metric
+
+	switch jsonMetric.MType {
+	case metrics.TypeMetricCounter:
+		metric = metrics.NewCounter(jsonMetric.ID)
+
+		if jsonMetric.Delta != nil {
+			metric.Update(*jsonMetric.Delta)
+		}
+
+	case metrics.TypeMetricGauge:
+		metric = metrics.NewGauge(jsonMetric.ID)
+
+		if jsonMetric.Val != nil {
+			metric.Update(*jsonMetric.Val)
+		}
+
+	default:
+		return nil, collector.ErrInvalidMetricType
+	}
+
+	return metric, nil
+}
+
 func ConvertToMetrics(jsonMetrics []Metric) ([]metrics.Metric, error) {
 	m := make([]metrics.Metric, 0, len(jsonMetrics))
 
 	for _, jsonMetric := range jsonMetrics {
-		switch jsonMetric.MType {
-		case metrics.TypeMetricCounter:
-			if jsonMetric.Delta == nil {
-				return nil, collector.ErrMetricNotFound
-			}
-
-			metric := metrics.NewCounter(jsonMetric.ID)
-			metric.Update(*jsonMetric.Delta)
-			m = append(m, metric)
-
-		case metrics.TypeMetricGauge:
-			if jsonMetric.Val == nil {
-				return nil, collector.ErrMetricNotFound
-			}
-
-			metric := metrics.NewGauge(jsonMetric.ID)
-			metric.Update(*jsonMetric.Val)
-			m = append(m, metric)
-
-		default:
-			return nil, collector.ErrInvalidMetricType
+		metric, err := ConvertToMetric(jsonMetric)
+		if err != nil {
+			return nil, fmt.Errorf("convert to metric: %w", err)
 		}
+
+		m = append(m, metric)
 	}
 
 	return m, nil
+}
+
+func ConvertToJSONMetric(m metrics.Metric) (Metric, error) {
+	jsonMetric := Metric{
+		ID:    m.Name(),
+		MType: m.Type(),
+	}
+
+	err := jsonMetric.SetValue(m.Value())
+	if err != nil {
+		return Metric{}, fmt.Errorf("json metric set value: %w", err)
+	}
+
+	return jsonMetric, nil
 }
 
 func ConvertToJSONMetrics(m []metrics.Metric) ([]Metric, error) {
 	jsonMetrics := make([]Metric, 0, len(m))
 
 	for _, metric := range m {
-		jsonMetric := Metric{
-			ID:    metric.Name(),
-			MType: metric.Type(),
-		}
-
-		err := jsonMetric.SetValue(metric.Value())
+		jsonMetric, err := ConvertToJSONMetric(metric)
 		if err != nil {
-			return nil, fmt.Errorf("json metric set value: %w", err)
+			return nil, fmt.Errorf("convert to json metric: %w", err)
 		}
 
 		jsonMetrics = append(jsonMetrics, jsonMetric)

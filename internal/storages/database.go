@@ -3,6 +3,7 @@ package storages
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -46,10 +47,7 @@ func NewDatabase(ctx context.Context, dp DatabaseParams) (collector.Collector, e
 	}, nil
 }
 
-func (d *Database) GetMetric(ctx context.Context, kind, name string) (any, error) {
-	d.lock.RLock()
-	defer d.lock.RUnlock()
-
+func (d *Database) getMetric(ctx context.Context, kind, name string) (any, error) {
 	row := d.DB.QueryRowContext(ctx,
 		"SELECT id, type, delta, value FROM metriccollector "+
 			"WHERE id = $1 AND type = $2 LIMIT 1", name, kind)
@@ -62,7 +60,9 @@ func (d *Database) GetMetric(ctx context.Context, kind, name string) (any, error
 	)
 
 	err := row.Scan(&id, &mType, &delta, &val)
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, collector.ErrMetricNotFound
+	} else if err != nil {
 		return nil, fmt.Errorf("row scan error: %w", err)
 	}
 
@@ -82,6 +82,13 @@ func (d *Database) GetMetric(ctx context.Context, kind, name string) (any, error
 	default:
 		return nil, collector.ErrMetricNotFound
 	}
+}
+
+func (d *Database) GetMetric(ctx context.Context, kind, name string) (any, error) {
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+
+	return d.getMetric(ctx, kind, name)
 }
 
 func (d *Database) GetAllMetrics(ctx context.Context) []metrics.Metric {
@@ -150,14 +157,38 @@ func (d *Database) UpdateMetric(ctx context.Context, kind, name string, value an
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	metric := serialization.Metric{
+	found := true
+
+	oldValue, err := d.getMetric(ctx, kind, name)
+	if errors.Is(err, collector.ErrMetricNotFound) {
+		found = false
+	} else if err != nil {
+		return fmt.Errorf("get metric: %w", err)
+	}
+
+	jsonMetric := serialization.Metric{
 		ID:    name,
 		MType: kind,
 	}
 
-	err := metric.SetValue(value)
+	if found {
+		err = jsonMetric.SetValue(oldValue)
+		if err != nil {
+			return fmt.Errorf("metric set value: %w", err)
+		}
+	}
+
+	metric, err := serialization.ConvertToMetric(jsonMetric)
 	if err != nil {
-		return fmt.Errorf("metric set value: %w", err)
+		return fmt.Errorf("convert to metric: %w", err)
+	}
+
+	if ok := metric.Update(value); !ok {
+		return collector.ErrUpdateMetric
+	}
+
+	if err = jsonMetric.SetValue(metric.Value()); err != nil {
+		return fmt.Errorf("metric set new value: %w", err)
 	}
 
 	_, err = d.DB.ExecContext(ctx,
@@ -167,7 +198,7 @@ func (d *Database) UpdateMetric(ctx context.Context, kind, name string, value an
 			"DO UPDATE SET "+
 			"delta = EXCLUDED.delta, "+
 			"value = EXCLUDED.value;",
-		metric.ID, metric.MType, metric.Delta, metric.Val)
+		jsonMetric.ID, jsonMetric.MType, jsonMetric.Delta, jsonMetric.Val)
 	if err != nil {
 		return fmt.Errorf("database insert into mettriccollector: %w", err)
 	}
@@ -201,15 +232,47 @@ func (d *Database) UpdateMetrics(ctx context.Context, m []metrics.Metric) error 
 	defer stmt.Close()
 
 	for _, metric := range m {
+		var (
+			oldValue  any
+			newMetric metrics.Metric
+			found     = true
+		)
+
+		oldValue, err = d.getMetric(ctx, metric.Type(), metric.Name())
+		if errors.Is(err, collector.ErrMetricNotFound) {
+			found = false
+		} else if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("get metric: %w", err)
+		}
+
 		jsonMetric := serialization.Metric{
 			ID:    metric.Name(),
 			MType: metric.Type(),
 		}
 
-		err = jsonMetric.SetValue(metric.Value())
+		if found {
+			err = jsonMetric.SetValue(oldValue)
+			if err != nil {
+				tx.Rollback()
+				return fmt.Errorf("metric set value: %w", err)
+			}
+		}
+
+		newMetric, err = serialization.ConvertToMetric(jsonMetric)
 		if err != nil {
 			tx.Rollback()
-			return fmt.Errorf("metric set value: %w", err)
+			return fmt.Errorf("convert to metric: %w", err)
+		}
+
+		if ok := newMetric.Update(metric.Value()); !ok {
+			tx.Rollback()
+			return collector.ErrUpdateMetric
+		}
+
+		if err = jsonMetric.SetValue(newMetric.Value()); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("metric set new value: %w", err)
 		}
 
 		_, err = stmt.ExecContext(ctx, jsonMetric.ID, jsonMetric.MType, jsonMetric.Delta, jsonMetric.Val)
