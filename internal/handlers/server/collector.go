@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
 	"github.com/Panterrich/MetricCollector/pkg/serialization"
-	"github.com/go-chi/chi"
 )
 
-type CollectorHandler func(col collector.Collector, w http.ResponseWriter, r *http.Request)
+type CollectorHandler func(c collector.Collector, w http.ResponseWriter, r *http.Request)
 
 func WithCollector(c collector.Collector, next CollectorHandler) http.HandlerFunc {
 	fn := func(w http.ResponseWriter, r *http.Request) {

@@ -10,7 +10,7 @@ import (
 )
 
 type Database struct {
-	Db *sql.DB
+	DB *sql.DB
 }
 
 var _ collector.Collector = (*Database)(nil)
@@ -26,7 +26,7 @@ func NewDatabase(dp DatabaseParams) (collector.Collector, error) {
 	}
 
 	return &Database{
-		Db: db,
+		DB: db,
 	}, nil
 }
 
@@ -43,5 +43,5 @@ func (d *Database) UpdateMetric(_ context.Context, _, _ string, _ any) error {
 }
 
 func (d *Database) Close() {
-	d.Db.Close()
+	d.DB.Close()
 }
