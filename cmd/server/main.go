@@ -26,6 +26,7 @@ var (
 	DefaultFileStoragePath      = ""
 	DefaultRestore              = true
 	DefaultDatabaseDsn          = ""
+	DefaultKeyHash              = ""
 )
 
 type Config struct {
@@ -35,6 +36,7 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
 	DatabaseDsn     string `env:"DATABASE_DSN"`
+	KeyHash         string `env:"KEY"`
 }
 
 var (
@@ -71,6 +73,7 @@ func init() {
 	root.Flags().StringVarP(&cfg.FileStoragePath, "f", "f", DefaultFileStoragePath, "file storage path")
 	root.Flags().BoolVarP(&cfg.Restore, "r", "r", DefaultRestore, "restore")
 	root.Flags().StringVarP(&cfg.DatabaseDsn, "d", "d", DefaultDatabaseDsn, "database dsn")
+	root.Flags().StringVarP(&cfg.KeyHash, "key", "k", DefaultKeyHash, "key for hash sha256")
 }
 
 func preRun(_ *cobra.Command, _ []string) {
@@ -97,6 +100,10 @@ func preRun(_ *cobra.Command, _ []string) {
 	if cfgEnv.DatabaseDsn != "" {
 		cfg.DatabaseDsn = cfgEnv.DatabaseDsn
 	}
+
+	if cfgEnv.KeyHash != "" {
+		cfg.KeyHash = cfgEnv.KeyHash
+	}
 }
 
 func run(_ *cobra.Command, _ []string) error {
@@ -112,6 +119,10 @@ func run(_ *cobra.Command, _ []string) error {
 	defer c.Close()
 
 	r := chi.NewRouter()
+
+	if cfg.KeyHash != "" {
+		r.Use(server.WithHashing([]byte(cfg.KeyHash)))
+	}
 
 	r.Use(server.WithGzipCompression)
 	r.Use(server.WithLogging)

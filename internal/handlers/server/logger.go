@@ -8,7 +8,7 @@ import (
 )
 
 type (
-	responseData struct {
+	loggingData struct {
 		status int
 		size   int
 		data   string
@@ -16,7 +16,7 @@ type (
 
 	loggingResponseWriter struct {
 		http.ResponseWriter
-		responseData *responseData
+		responseData *loggingData
 	}
 )
 
@@ -26,7 +26,7 @@ var _ http.ResponseWriter = &loggingResponseWriter{}
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
-	r.responseData.data = string(b)
+	r.responseData.data += string(b)
 
 	return size, err
 }
@@ -40,7 +40,7 @@ func WithLogging(h http.Handler) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		responseData := &responseData{
+		responseData := &loggingData{
 			status: 0,
 			size:   0,
 		}

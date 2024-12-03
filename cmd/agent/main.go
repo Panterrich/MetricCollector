@@ -17,18 +17,21 @@ import (
 
 	"github.com/Panterrich/MetricCollector/internal/handlers/agent"
 	"github.com/Panterrich/MetricCollector/internal/storages"
+	runtime_stats "github.com/Panterrich/MetricCollector/pkg/runtime-stats"
 )
 
 var (
 	DefaultEndPoint            = "localhost:8080"
 	DefaultReportInterval uint = 10
 	DefaultPollInterval   uint = 2
+	DefaultKeyHash             = ""
 )
 
 type Config struct {
 	EndPoint       string `env:"ADDRESS"`
 	ReportInterval uint   `env:"REPORT_INTERVAL"`
 	PollInterval   uint   `env:"POLL_INTERVAL"`
+	KeyHash        string `env:"KEY"`
 }
 
 var (
@@ -61,9 +64,10 @@ var (
 )
 
 func init() {
-	root.Flags().StringVarP(&cfg.EndPoint, "a", "a", "localhost:8080", "end-point for HTTP-server")
-	root.Flags().UintVarP(&cfg.ReportInterval, "r", "r", 10, "report interval")
-	root.Flags().UintVarP(&cfg.PollInterval, "p", "p", 2, "poll interval")
+	root.Flags().StringVarP(&cfg.EndPoint, "a", "a", DefaultEndPoint, "end-point for HTTP-server")
+	root.Flags().UintVarP(&cfg.ReportInterval, "r", "r", DefaultReportInterval, "report interval")
+	root.Flags().UintVarP(&cfg.PollInterval, "p", "p", DefaultPollInterval, "poll interval")
+	root.Flags().StringVarP(&cfg.KeyHash, "key", "k", DefaultKeyHash, "key for hash sha256")
 }
 
 func preRun(_ *cobra.Command, _ []string) {
@@ -77,6 +81,10 @@ func preRun(_ *cobra.Command, _ []string) {
 
 	if cfgEnv.PollInterval != 0 {
 		cfg.PollInterval = cfgEnv.PollInterval
+	}
+
+	if cfgEnv.KeyHash != "" {
+		cfg.KeyHash = cfgEnv.KeyHash
 	}
 }
 
@@ -107,9 +115,9 @@ func run(_ *cobra.Command, _ []string) error {
 			case <-ctx.Done():
 				return
 			case <-reportTimer.C:
-				agent.ReportAllMetrics(ctx, storage, client, serverAddress)
+				agent.ReportAllMetrics(ctx, storage, client, serverAddress, cfg.KeyHash)
 			case <-pollTimer.C:
-				agent.UpdateAllMetrics(ctx, storage)
+				runtime_stats.UpdateAllMetrics(ctx, storage)
 			}
 		}
 	}()

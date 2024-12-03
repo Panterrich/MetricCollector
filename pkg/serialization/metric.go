@@ -1,6 +1,9 @@
 package serialization
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
@@ -56,4 +59,13 @@ func (m *Metric) SetValue(value any) error {
 	default:
 		return collector.ErrInvalidMetricType
 	}
+}
+
+func MetricsToJSON(metrics []Metric) ([]byte, error) {
+	data, err := json.MarshalIndent(&metrics, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("metrics to json: %w", err)
+	}
+
+	return data, nil
 }
