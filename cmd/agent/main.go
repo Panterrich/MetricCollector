@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -13,20 +15,23 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
-	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/internal/handlers/agent"
+	"github.com/Panterrich/MetricCollector/internal/storages"
+	runtime_stats "github.com/Panterrich/MetricCollector/pkg/runtime-stats"
 )
 
 var (
 	DefaultEndPoint            = "localhost:8080"
 	DefaultReportInterval uint = 10
 	DefaultPollInterval   uint = 2
+	DefaultKeyHash             = ""
 )
 
 type Config struct {
 	EndPoint       string `env:"ADDRESS"`
 	ReportInterval uint   `env:"REPORT_INTERVAL"`
 	PollInterval   uint   `env:"POLL_INTERVAL"`
+	KeyHash        string `env:"KEY"`
 }
 
 var (
@@ -59,9 +64,10 @@ var (
 )
 
 func init() {
-	root.Flags().StringVarP(&cfg.EndPoint, "a", "a", "localhost:8080", "end-point for HTTP-server")
-	root.Flags().UintVarP(&cfg.ReportInterval, "r", "r", 10, "report interval")
-	root.Flags().UintVarP(&cfg.PollInterval, "p", "p", 2, "poll interval")
+	root.Flags().StringVarP(&cfg.EndPoint, "a", "a", DefaultEndPoint, "end-point for HTTP-server")
+	root.Flags().UintVarP(&cfg.ReportInterval, "r", "r", DefaultReportInterval, "report interval")
+	root.Flags().UintVarP(&cfg.PollInterval, "p", "p", DefaultPollInterval, "poll interval")
+	root.Flags().StringVarP(&cfg.KeyHash, "key", "k", DefaultKeyHash, "key for hash sha256")
 }
 
 func preRun(_ *cobra.Command, _ []string) {
@@ -76,33 +82,51 @@ func preRun(_ *cobra.Command, _ []string) {
 	if cfgEnv.PollInterval != 0 {
 		cfg.PollInterval = cfgEnv.PollInterval
 	}
+
+	if cfgEnv.KeyHash != "" {
+		cfg.KeyHash = cfgEnv.KeyHash
+	}
 }
 
 func run(_ *cobra.Command, _ []string) error {
-	var metrics collector.Collector
-
-	storage := collector.NewMemStorage()
-	metrics = &storage
+	storage := storages.NewMemory()
 
 	client := resty.New()
 	serverAddress := cfg.EndPoint
 
-	reportTimer := time.NewTicker(time.Duration(cfg.ReportInterval))
-	pollTimer := time.NewTicker(time.Duration(cfg.PollInterval))
+	reportTimer := time.NewTicker(time.Duration(cfg.ReportInterval) * time.Second)
+	pollTimer := time.NewTicker(time.Duration(cfg.PollInterval) * time.Second)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
-	for {
-		select {
-		case <-stop:
-			return nil
-		case <-reportTimer.C:
-			agent.ReportAllMetrics(metrics, client, serverAddress)
-		case <-pollTimer.C:
-			agent.UpdateAllMetrics(metrics)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-reportTimer.C:
+				agent.ReportAllMetrics(ctx, storage, client, serverAddress, cfg.KeyHash)
+			case <-pollTimer.C:
+				runtime_stats.UpdateAllMetrics(ctx, storage)
+			}
 		}
-	}
+	}()
+
+	<-stop
+	cancel()
+	wg.Wait()
+
+	return nil
 }
 
 func main() {
