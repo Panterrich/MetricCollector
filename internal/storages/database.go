@@ -33,7 +33,7 @@ func NewDatabase(ctx context.Context, dp DatabaseParams) (collector.Collector, e
 		"CREATE TABLE IF NOT EXISTS metriccollector ("+
 			"\"id\" VARCHAR(250) PRIMARY KEY, "+
 			"\"type\" TEXT, "+
-			"\"delta\" INTEGER, "+
+			"\"delta\" BIGINT, "+
 			"\"value\" DOUBLE PRECISION"+
 			");")
 	if err != nil {
