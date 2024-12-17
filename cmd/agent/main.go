@@ -13,11 +13,13 @@ import (
 	"github.com/caarlos0/env/v6"
 	"github.com/go-resty/resty/v2"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/Panterrich/MetricCollector/internal/handlers/agent"
 	"github.com/Panterrich/MetricCollector/internal/storages"
 	runtime_stats "github.com/Panterrich/MetricCollector/pkg/runtime-stats"
+	"github.com/Panterrich/MetricCollector/pkg/workpool"
 )
 
 var (
@@ -25,6 +27,7 @@ var (
 	DefaultReportInterval uint = 10
 	DefaultPollInterval   uint = 2
 	DefaultKeyHash             = ""
+	DefaultRateLimit      uint = 1
 )
 
 type Config struct {
@@ -32,6 +35,7 @@ type Config struct {
 	ReportInterval uint   `env:"REPORT_INTERVAL"`
 	PollInterval   uint   `env:"POLL_INTERVAL"`
 	KeyHash        string `env:"KEY"`
+	RateLimit      uint   `env:"RATE_LIMIT"`
 }
 
 var (
@@ -56,6 +60,10 @@ var (
 				return fmt.Errorf("zero interval")
 			}
 
+			if cfg.RateLimit == 0 {
+				return fmt.Errorf("zero rate limit")
+			}
+
 			return nil
 		},
 		PreRun: preRun,
@@ -68,6 +76,7 @@ func init() {
 	root.Flags().UintVarP(&cfg.ReportInterval, "r", "r", DefaultReportInterval, "report interval")
 	root.Flags().UintVarP(&cfg.PollInterval, "p", "p", DefaultPollInterval, "poll interval")
 	root.Flags().StringVarP(&cfg.KeyHash, "key", "k", DefaultKeyHash, "key for hash sha256")
+	root.Flags().UintVarP(&cfg.RateLimit, "l", "l", DefaultRateLimit, "rate limit")
 }
 
 func preRun(_ *cobra.Command, _ []string) {
@@ -103,6 +112,8 @@ func run(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	pool := workpool.NewPool(ctx, int(cfg.RateLimit))
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -115,18 +126,27 @@ func run(_ *cobra.Command, _ []string) error {
 			case <-ctx.Done():
 				return
 			case <-reportTimer.C:
-				agent.ReportAllMetrics(ctx, storage, client, serverAddress, cfg.KeyHash)
+				pool.Schedule(func(ctx context.Context) error {
+					agent.ReportAllMetrics(ctx, storage, client, serverAddress, cfg.KeyHash)
+					return nil
+				})
 			case <-pollTimer.C:
-				runtime_stats.UpdateAllMetrics(ctx, storage)
+				runtime_stats.UpdateAllMetrics(pool, storage)
 			}
 		}
 	}()
 
-	<-stop
-	cancel()
-	wg.Wait()
+	for {
+		select {
+		case <-stop:
+			cancel()
+			wg.Wait()
 
-	return nil
+			return nil
+		case err := <-pool.Results:
+			log.Err(err).Send()
+		}
+	}
 }
 
 func main() {

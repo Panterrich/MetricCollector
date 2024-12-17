@@ -5,8 +5,12 @@ import (
 	"math/rand/v2"
 	"runtime"
 
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
+
 	"github.com/Panterrich/MetricCollector/internal/collector"
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
+	"github.com/Panterrich/MetricCollector/pkg/workpool"
 )
 
 type MemRuntimeStat struct {
@@ -125,15 +129,28 @@ var MemRuntimeStats = []MemRuntimeStat{
 	},
 }
 
-func UpdateAllMetrics(ctx context.Context, storage collector.Collector) {
+func UpdateAllMetrics(pool *workpool.Pool, storage collector.Collector) {
+	updateMetric := func(kind, name string, value any) {
+		pool.Schedule(func(ctx context.Context) error {
+			return storage.UpdateMetric(ctx, kind, name, value)
+		})
+	}
+
 	var memStats runtime.MemStats
 
 	runtime.ReadMemStats(&memStats)
 
 	for _, v := range MemRuntimeStats {
-		storage.UpdateMetric(ctx, metrics.TypeMetricGauge, v.Name, v.Getter(&memStats))
+		updateMetric(metrics.TypeMetricGauge, v.Name, v.Getter(&memStats))
 	}
 
-	storage.UpdateMetric(ctx, metrics.TypeMetricCounter, "PollCount", int64(1))
-	storage.UpdateMetric(ctx, metrics.TypeMetricGauge, "RandomValue", rand.Float64())
+	v, _ := mem.VirtualMemory()
+	updateMetric(metrics.TypeMetricGauge, "TotalMemory", v.Total)
+	updateMetric(metrics.TypeMetricGauge, "FreeMemory", v.Free)
+
+	p, _ := cpu.Percent(0, false)
+	updateMetric(metrics.TypeMetricGauge, "CPUutilization1", p[0])
+
+	updateMetric(metrics.TypeMetricCounter, "PollCount", int64(1))
+	updateMetric(metrics.TypeMetricGauge, "RandomValue", rand.Float64())
 }
