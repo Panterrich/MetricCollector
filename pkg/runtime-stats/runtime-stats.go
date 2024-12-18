@@ -2,6 +2,7 @@ package runtimestats
 
 import (
 	"context"
+	"fmt"
 	"math/rand/v2"
 	"runtime"
 
@@ -129,10 +130,13 @@ var MemRuntimeStats = []MemRuntimeStat{
 	},
 }
 
-func UpdateAllMetrics(pool *workpool.Pool, storage collector.Collector) {
+func UpdateAllMetrics(ctx context.Context, pool *workpool.Pool, storage collector.Collector) {
 	updateMetric := func(kind, name string, value any) {
-		pool.Schedule(func(ctx context.Context) error {
-			return storage.UpdateMetric(ctx, kind, name, value)
+		pool.Schedule(ctx, func(context context.Context) workpool.Result {
+			return workpool.Result{
+				Msg: fmt.Sprintf("%s(%s)", name, kind),
+				Err: storage.UpdateMetric(context, kind, name, value),
+			}
 		})
 	}
 
@@ -145,8 +149,8 @@ func UpdateAllMetrics(pool *workpool.Pool, storage collector.Collector) {
 	}
 
 	v, _ := mem.VirtualMemory()
-	updateMetric(metrics.TypeMetricGauge, "TotalMemory", v.Total)
-	updateMetric(metrics.TypeMetricGauge, "FreeMemory", v.Free)
+	updateMetric(metrics.TypeMetricGauge, "TotalMemory", float64(v.Total))
+	updateMetric(metrics.TypeMetricGauge, "FreeMemory", float64(v.Free))
 
 	p, _ := cpu.Percent(0, false)
 	updateMetric(metrics.TypeMetricGauge, "CPUutilization1", p[0])

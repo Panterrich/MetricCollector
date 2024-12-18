@@ -5,17 +5,22 @@ import (
 	"sync"
 )
 
+type Result struct {
+	Msg string
+	Err error
+}
+
 type Pool struct {
 	wg      sync.WaitGroup
-	jobs    chan func(ctx context.Context) error
-	Results chan error
+	jobs    chan func(ctx context.Context) Result
+	Results chan Result
 }
 
 func NewPool(ctx context.Context, nWorkers int) *Pool {
 	p := &Pool{
 		wg:      sync.WaitGroup{},
-		jobs:    make(chan func(ctx context.Context) error, nWorkers),
-		Results: make(chan error, nWorkers),
+		jobs:    make(chan func(ctx context.Context) Result, nWorkers),
+		Results: make(chan Result, nWorkers),
 	}
 
 	p.wg.Add(nWorkers)
@@ -35,14 +40,19 @@ func NewPool(ctx context.Context, nWorkers int) *Pool {
 		}()
 	}
 
-	go func() {
-		p.wg.Wait()
-		close(p.Results)
-	}()
-
 	return p
 }
 
-func (p *Pool) Schedule(job func(ctx context.Context) error) {
-	p.jobs <- job
+func (p *Pool) Schedule(ctx context.Context, job func(ctx context.Context) Result) {
+	select {
+	case p.jobs <- job:
+		break
+	case <-ctx.Done():
+		break
+	}
+}
+
+func (p *Pool) Wait() {
+	p.wg.Wait()
+	close(p.Results)
 }

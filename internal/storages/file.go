@@ -18,6 +18,7 @@ type File struct {
 	filePath string
 
 	ticker *time.Ticker
+	stop   chan struct{}
 	wg     sync.WaitGroup
 
 	storage collector.Collector
@@ -35,6 +36,8 @@ func NewFile(ctx context.Context, fp FileParams) (collector.Collector, error) {
 	fs := &File{
 		lock:     sync.Mutex{},
 		filePath: fp.FilePath,
+		ticker:   nil,
+		stop:     make(chan struct{}),
 		wg:       sync.WaitGroup{},
 		storage:  NewMemory(),
 	}
@@ -49,12 +52,10 @@ func NewFile(ctx context.Context, fp FileParams) (collector.Collector, error) {
 			for {
 				select {
 				case <-fs.ticker.C:
-					fs.lock.Lock()
-					defer fs.lock.Unlock()
-
 					if err := serialization.Save(ctx, fs.storage, fs.filePath); err != nil {
 						log.Error().Msgf("can't save database: %v", err)
 					}
+				case <-fs.stop:
 				case <-ctx.Done():
 					return
 				}
@@ -126,7 +127,7 @@ func (f *File) UpdateMetrics(ctx context.Context, metrics []metrics.Metric) erro
 
 func (f *File) Close() {
 	if f.ticker != nil {
-		f.ticker.Stop()
+		f.stop <- struct{}{}
 	}
 
 	f.wg.Wait()

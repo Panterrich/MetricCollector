@@ -116,7 +116,27 @@ func run(_ *cobra.Command, _ []string) error {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+
+		<-stop
+		cancel()
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case res := <-pool.Results:
+				log.Debug().Err(res.Err).Msg(res.Msg)
+			}
+		}
+	}()
 
 	go func() {
 		defer wg.Done()
@@ -126,27 +146,24 @@ func run(_ *cobra.Command, _ []string) error {
 			case <-ctx.Done():
 				return
 			case <-reportTimer.C:
-				pool.Schedule(func(ctx context.Context) error {
+				pool.Schedule(ctx, func(ctx context.Context) workpool.Result {
 					agent.ReportAllMetrics(ctx, storage, client, serverAddress, cfg.KeyHash)
-					return nil
+
+					return workpool.Result{
+						Msg: "report all",
+						Err: nil,
+					}
 				})
 			case <-pollTimer.C:
-				runtime_stats.UpdateAllMetrics(pool, storage)
+				runtime_stats.UpdateAllMetrics(ctx, pool, storage)
 			}
 		}
 	}()
 
-	for {
-		select {
-		case <-stop:
-			cancel()
-			wg.Wait()
+	pool.Wait()
+	wg.Wait()
 
-			return nil
-		case err := <-pool.Results:
-			log.Err(err).Send()
-		}
-	}
+	return nil
 }
 
 func main() {

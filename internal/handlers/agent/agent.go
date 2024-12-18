@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -81,5 +80,8 @@ func ReportAllMetrics(
 		time.Sleep(d)
 	}
 
-	fmt.Println(resp, err)
+	log.Info().
+		Str("response", string(resp.Body())).
+		Err(err).
+		Send()
 }

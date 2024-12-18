@@ -48,7 +48,7 @@ func (m *Memory) GetAllMetrics(_ context.Context) []metrics.Metric {
 
 	for _, specMetrics := range m.storage {
 		for _, metric := range specMetrics {
-			res = append(res, metric)
+			res = append(res, metrics.Clone(metric))
 		}
 	}
 
@@ -76,7 +76,7 @@ func (m *Memory) UpdateMetric(_ context.Context, kind, name string, value any) e
 	}
 
 	if !metric.Update(value) {
-		return collector.ErrUpdateMetric
+		return fmt.Errorf("%s(%s): %w", name, kind, collector.ErrUpdateMetric)
 	}
 
 	return nil
