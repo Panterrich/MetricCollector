@@ -24,3 +24,10 @@ func NewMetric(kind, name string) Metric {
 
 	return nil
 }
+
+func Clone(m Metric) Metric {
+	newMetric := NewMetric(m.Type(), m.Name())
+	newMetric.Update(m.Value())
+
+	return newMetric
+}
