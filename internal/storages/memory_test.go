@@ -7,9 +7,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Panterrich/MetricCollector/internal/storages"
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -25,6 +26,7 @@ func TestMemory_UpdateSequenceCounter(t *testing.T) {
 	defer cancel()
 
 	m := storages.NewMemory()
+	defer m.Close()
 
 	_, err := m.GetMetric(ctx, metrics.TypeMetricCounter, "counter")
 	assert.Error(t, err)
@@ -41,6 +43,11 @@ func TestMemory_UpdateSequenceCounter(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, a, val.(int64))
 	}
+
+	_, err = m.GetMetric(ctx, metrics.TypeMetricCounter, "unknown")
+	assert.Error(t, err)
+
+	assert.Error(t, m.UpdateMetric(ctx, metrics.TypeMetricCounter, "counter", 1.0))
 }
 
 func TestMemory_UpdateSequenceGauge(t *testing.T) {
@@ -48,6 +55,7 @@ func TestMemory_UpdateSequenceGauge(t *testing.T) {
 	defer cancel()
 
 	m := storages.NewMemory()
+	defer m.Close()
 
 	_, err := m.GetMetric(ctx, metrics.TypeMetricGauge, "gauge")
 	assert.Error(t, err)
@@ -61,6 +69,28 @@ func TestMemory_UpdateSequenceGauge(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, v, val.(float64))
 	}
+
+	_, err = m.GetMetric(ctx, metrics.TypeMetricGauge, "unknown")
+	assert.Error(t, err)
+
+	assert.Error(t, m.UpdateMetric(ctx, metrics.TypeMetricGauge, "gauge", 1))
+}
+
+func TestMemory_UpdateMetrics(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	m := storages.NewMemory()
+
+	sliceMetrics := []metrics.Metric{
+		metrics.NewCounter("counter_1"),
+		metrics.NewCounter("counter_2"),
+		metrics.NewGauge("gauge_1"),
+	}
+
+	m.UpdateMetrics(ctx, sliceMetrics)
+
+	assert.ElementsMatch(t, sliceMetrics, m.GetAllMetrics(ctx))
 }
 
 func TestMemory_SingleCounter(t *testing.T) {
@@ -68,6 +98,7 @@ func TestMemory_SingleCounter(t *testing.T) {
 	defer cancel()
 
 	m := storages.NewMemory()
+	defer m.Close()
 
 	var wg sync.WaitGroup
 
@@ -99,8 +130,6 @@ func TestMemory_SingleCounter(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, int64(NProducers*Attempts), val.(int64))
-
-	m.Close()
 }
 
 func TestMemory_SeveralTypes(_ *testing.T) {
@@ -108,6 +137,7 @@ func TestMemory_SeveralTypes(_ *testing.T) {
 	defer cancel()
 
 	m := storages.NewMemory()
+	defer m.Close()
 
 	var wg sync.WaitGroup
 
@@ -138,7 +168,6 @@ func TestMemory_SeveralTypes(_ *testing.T) {
 	}
 
 	wg.Wait()
-	m.Close()
 }
 
 func BenchmarkMemory(b *testing.B) {
@@ -173,5 +202,6 @@ func BenchmarkMemory(b *testing.B) {
 		}
 
 		wg.Wait()
+		m.Close()
 	}
 }

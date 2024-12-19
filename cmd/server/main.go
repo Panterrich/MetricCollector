@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net"
 	"net/http"
@@ -157,12 +158,18 @@ func NewCollector(ctx context.Context, cfg Config) (collector.Collector, error) 
 	var (
 		c   collector.Collector
 		err error
+		db  *sql.DB
 	)
 
 	switch {
 	case cfg.DatabaseDsn != "":
+		db, err = sql.Open("pgx", cfg.DatabaseDsn)
+		if err != nil {
+			return nil, fmt.Errorf("database create \"%s\": %w", cfg.DatabaseDsn, err)
+		}
+
 		c, err = storages.NewDatabase(ctx, storages.DatabaseParams{
-			DatabaseDsn: cfg.DatabaseDsn,
+			DB: db,
 		})
 	case cfg.FileStoragePath != "":
 		c, err = storages.NewFile(ctx, storages.FileParams{
@@ -175,6 +182,7 @@ func NewCollector(ctx context.Context, cfg Config) (collector.Collector, error) 
 	}
 
 	if err != nil {
+		c.Close()
 		return nil, fmt.Errorf("new collector: %w", err)
 	}
 

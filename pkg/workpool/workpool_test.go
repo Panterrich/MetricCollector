@@ -5,10 +5,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Panterrich/MetricCollector/internal/storages"
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
 	"github.com/Panterrich/MetricCollector/pkg/workpool"
-	"github.com/stretchr/testify/assert"
 )
 
 const (

@@ -20,16 +20,11 @@ type Database struct {
 var _ collector.Collector = (*Database)(nil)
 
 type DatabaseParams struct {
-	DatabaseDsn string
+	DB *sql.DB
 }
 
 func NewDatabase(ctx context.Context, dp DatabaseParams) (collector.Collector, error) {
-	db, err := sql.Open("pgx", dp.DatabaseDsn)
-	if err != nil {
-		return nil, fmt.Errorf("database create \"%s\": %w", dp.DatabaseDsn, err)
-	}
-
-	_, err = db.ExecContext(ctx,
+	_, err := dp.DB.ExecContext(ctx,
 		"CREATE TABLE IF NOT EXISTS metriccollector ("+
 			"\"id\" VARCHAR(250) PRIMARY KEY, "+
 			"\"type\" TEXT, "+
@@ -37,13 +32,12 @@ func NewDatabase(ctx context.Context, dp DatabaseParams) (collector.Collector, e
 			"\"value\" DOUBLE PRECISION"+
 			");")
 	if err != nil {
-		db.Close()
 		return nil, fmt.Errorf("exec context: %w", err)
 	}
 
 	return &Database{
 		lock: sync.RWMutex{},
-		DB:   db,
+		DB:   dp.DB,
 	}, nil
 }
 

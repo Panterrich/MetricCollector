@@ -56,6 +56,7 @@ func NewFile(ctx context.Context, fp FileParams) (collector.Collector, error) {
 						log.Error().Msgf("can't save database: %v", err)
 					}
 				case <-fs.stop:
+					return
 				case <-ctx.Done():
 					return
 				}
@@ -86,14 +87,14 @@ func (f *File) GetAllMetrics(ctx context.Context) []metrics.Metric {
 }
 
 func (f *File) UpdateMetric(ctx context.Context, kind, name string, value any) error {
-	f.lock.Lock()
-	defer f.lock.Unlock()
-
 	if err := f.storage.UpdateMetric(ctx, kind, name, value); err != nil {
 		return fmt.Errorf("file storage update metric: %w", err)
 	}
 
 	if f.ticker == nil {
+		f.lock.Lock()
+		defer f.lock.Unlock()
+
 		if err := serialization.Save(ctx, f.storage, f.filePath); err != nil {
 			return fmt.Errorf("file storage save: %w", err)
 		}
@@ -103,9 +104,6 @@ func (f *File) UpdateMetric(ctx context.Context, kind, name string, value any) e
 }
 
 func (f *File) UpdateMetrics(ctx context.Context, metrics []metrics.Metric) error {
-	f.lock.Lock()
-	defer f.lock.Unlock()
-
 	for _, metric := range metrics {
 		if err := f.storage.UpdateMetric(ctx, metric.Type(), metric.Name(), metric.Value()); err != nil {
 			return fmt.Errorf("file storage update metric: %w", err)
@@ -117,6 +115,9 @@ func (f *File) UpdateMetrics(ctx context.Context, metrics []metrics.Metric) erro
 	}
 
 	if f.ticker == nil {
+		f.lock.Lock()
+		defer f.lock.Unlock()
+
 		if err := serialization.Save(ctx, f.storage, f.filePath); err != nil {
 			return fmt.Errorf("file storage save: %w", err)
 		}

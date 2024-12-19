@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/Panterrich/MetricCollector/internal/storages"
 	runtimestats "github.com/Panterrich/MetricCollector/pkg/runtime-stats"
 	"github.com/Panterrich/MetricCollector/pkg/workpool"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
