@@ -9,9 +9,14 @@ import (
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
+type element struct {
+	sync.RWMutex
+	metrics.Metric
+}
+
 type Memory struct {
 	lock    sync.RWMutex
-	storage map[string]map[string]metrics.Metric
+	storage map[string]map[string]*element
 }
 
 var _ collector.Collector = (*Memory)(nil)
@@ -19,13 +24,12 @@ var _ collector.Collector = (*Memory)(nil)
 func NewMemory() collector.Collector {
 	return &Memory{
 		lock:    sync.RWMutex{},
-		storage: make(map[string]map[string]metrics.Metric),
+		storage: make(map[string]map[string]*element),
 	}
 }
 
 func (m *Memory) GetMetric(_ context.Context, kind, name string) (any, error) {
 	m.lock.RLock()
-	defer m.lock.RUnlock()
 
 	specificMetrics, ok := m.storage[kind]
 	if !ok {
@@ -36,6 +40,10 @@ func (m *Memory) GetMetric(_ context.Context, kind, name string) (any, error) {
 	if !ok {
 		return nil, collector.ErrMetricNotFound
 	}
+	m.lock.RUnlock()
+
+	metric.RLock()
+	defer metric.RUnlock()
 
 	return metric.Value(), nil
 }
@@ -48,7 +56,9 @@ func (m *Memory) GetAllMetrics(_ context.Context) []metrics.Metric {
 
 	for _, specMetrics := range m.storage {
 		for _, metric := range specMetrics {
+			metric.RLock()
 			res = append(res, metrics.Clone(metric))
+			metric.RUnlock()
 		}
 	}
 
@@ -56,24 +66,49 @@ func (m *Memory) GetAllMetrics(_ context.Context) []metrics.Metric {
 }
 
 func (m *Memory) UpdateMetric(_ context.Context, kind, name string, value any) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	// fast path
+	m.lock.RLock()
+	specificMetrics, hasKind := m.storage[kind]
 
-	specificMetrics, ok := m.storage[kind]
-	if !ok {
-		specificMetrics = make(map[string]metrics.Metric)
+	if hasKind {
+		metric, ok := specificMetrics[name]
+		if ok {
+			m.lock.RUnlock()
+
+			metric.Lock()
+			defer metric.Unlock()
+
+			if !metric.Update(value) {
+				return fmt.Errorf("%s(%s): %w", name, kind, collector.ErrUpdateMetric)
+			}
+
+			return nil
+		}
+	}
+	m.lock.RUnlock()
+
+	m.lock.Lock()
+	specificMetrics, hasKind = m.storage[kind]
+
+	if !hasKind {
+		specificMetrics = make(map[string]*element)
 		m.storage[kind] = specificMetrics
 	}
 
 	metric, ok := specificMetrics[name]
+
 	if !ok {
-		metric = metrics.NewMetric(kind, name)
-		if metric == nil {
+		metric = &element{Metric: metrics.NewMetric(kind, name)}
+		if metric.Metric == nil {
 			return collector.ErrInvalidMetricType
 		}
 
 		specificMetrics[name] = metric
 	}
+	m.lock.Unlock()
+
+	metric.Lock()
+	defer metric.Unlock()
 
 	if !metric.Update(value) {
 		return fmt.Errorf("%s(%s): %w", name, kind, collector.ErrUpdateMetric)

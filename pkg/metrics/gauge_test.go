@@ -55,6 +55,9 @@ func TestGauge(t *testing.T) {
 			assert.Equal(t, tt.expected, g.Value())
 			assert.Equal(t, tt.fields.name, g.Name())
 			assert.Equal(t, metrics.TypeMetricGauge, g.Type())
+
+			ng := metrics.Clone(g)
+			assert.Equal(t, ng, g)
 		})
 	}
 }

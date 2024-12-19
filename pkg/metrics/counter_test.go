@@ -61,6 +61,9 @@ func TestCounter(t *testing.T) {
 			assert.Equal(t, tt.fields.name, c.Name())
 			assert.Equal(t, metrics.TypeMetricCounter, c.Type())
 			assert.Equal(t, tt.expected, c.Value())
+
+			nc := metrics.Clone(c)
+			assert.Equal(t, nc, c)
 		})
 	}
 }

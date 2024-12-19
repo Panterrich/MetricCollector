@@ -32,7 +32,12 @@ func NewPool(ctx context.Context, nWorkers int) *Pool {
 			for {
 				select {
 				case job := <-p.jobs:
-					p.Results <- job(ctx)
+					select {
+					case p.Results <- job(ctx):
+						break
+					case <-ctx.Done():
+						return
+					}
 				case <-ctx.Done():
 					return
 				}

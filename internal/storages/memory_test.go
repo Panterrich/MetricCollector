@@ -12,7 +12,7 @@ import (
 
 const (
 	NConsumers = 10
-	NProducers = 10
+	NProducers = 100
 	Attempts   = 10000
 )
 
@@ -26,7 +26,7 @@ func TestMemory(t *testing.T) {
 
 	wg.Add(NConsumers + NProducers)
 
-	for i := 0; i < NConsumers; i++ {
+	for i := 0; i < NProducers; i++ {
 		go func() {
 			defer wg.Done()
 
@@ -36,7 +36,7 @@ func TestMemory(t *testing.T) {
 		}()
 	}
 
-	for i := 0; i < NProducers; i++ {
+	for i := 0; i < NConsumers; i++ {
 		go func() {
 			defer wg.Done()
 
@@ -51,5 +51,43 @@ func TestMemory(t *testing.T) {
 	val, err := m.GetMetric(ctx, metrics.TypeMetricCounter, "counter")
 
 	assert.Nil(t, err)
-	assert.Equal(t, int64(NConsumers*Attempts), val.(int64))
+	assert.Equal(t, int64(NProducers*Attempts), val.(int64))
+
+	m.Close()
+}
+
+func BenchmarkMemory(b *testing.B) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for i := 0; i < b.N; i++ {
+		m := storages.NewMemory()
+
+		var wg sync.WaitGroup
+
+		wg.Add(NConsumers + NProducers)
+
+		for i := 0; i < NProducers; i++ {
+			go func() {
+				defer wg.Done()
+
+				for j := 0; j < Attempts; j++ {
+					m.UpdateMetric(ctx, metrics.TypeMetricCounter, "counter", int64(1))
+				}
+			}()
+		}
+
+		for i := 0; i < NConsumers; i++ {
+			go func() {
+				defer wg.Done()
+
+				for j := 0; j < Attempts; j++ {
+					m.GetAllMetrics(ctx)
+				}
+			}()
+		}
+
+		wg.Wait()
+	}
+
 }
