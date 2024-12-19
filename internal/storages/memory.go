@@ -30,6 +30,7 @@ func NewMemory() collector.Collector {
 
 func (m *Memory) GetMetric(_ context.Context, kind, name string) (any, error) {
 	m.lock.RLock()
+	defer m.lock.RUnlock()
 
 	specificMetrics, ok := m.storage[kind]
 	if !ok {
@@ -40,7 +41,6 @@ func (m *Memory) GetMetric(_ context.Context, kind, name string) (any, error) {
 	if !ok {
 		return nil, collector.ErrMetricNotFound
 	}
-	m.lock.RUnlock()
 
 	metric.RLock()
 	defer metric.RUnlock()
@@ -57,7 +57,7 @@ func (m *Memory) GetAllMetrics(_ context.Context) []metrics.Metric {
 	for _, specMetrics := range m.storage {
 		for _, metric := range specMetrics {
 			metric.RLock()
-			res = append(res, metrics.Clone(metric))
+			res = append(res, metrics.Clone(metric.Metric))
 			metric.RUnlock()
 		}
 	}
@@ -73,7 +73,7 @@ func (m *Memory) UpdateMetric(_ context.Context, kind, name string, value any) e
 	if hasKind {
 		metric, ok := specificMetrics[name]
 		if ok {
-			m.lock.RUnlock()
+			defer m.lock.RUnlock()
 
 			metric.Lock()
 			defer metric.Unlock()
@@ -88,6 +88,8 @@ func (m *Memory) UpdateMetric(_ context.Context, kind, name string, value any) e
 	m.lock.RUnlock()
 
 	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	specificMetrics, hasKind = m.storage[kind]
 
 	if !hasKind {
@@ -105,10 +107,6 @@ func (m *Memory) UpdateMetric(_ context.Context, kind, name string, value any) e
 
 		specificMetrics[name] = metric
 	}
-	m.lock.Unlock()
-
-	metric.Lock()
-	defer metric.Unlock()
 
 	if !metric.Update(value) {
 		return fmt.Errorf("%s(%s): %w", name, kind, collector.ErrUpdateMetric)
