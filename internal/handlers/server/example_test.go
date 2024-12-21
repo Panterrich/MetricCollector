@@ -12,7 +12,7 @@ import (
 	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
-func ExampleGetListMetrics() {
+func ExampleGetListMetrics() { //nolint:testableexamples // Has already output
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

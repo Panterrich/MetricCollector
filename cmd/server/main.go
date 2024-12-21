@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 
 	"github.com/caarlos0/env"
 	"github.com/go-chi/chi/v5"
@@ -197,11 +196,12 @@ func main() {
 	err := env.Parse(&cfgEnv)
 	if err != nil {
 		log.Err(err).Send()
-		os.Exit(1)
+		return
 	}
 
 	err = root.Execute()
 	if err != nil {
-		os.Exit(1)
+		log.Err(err).Send()
+		return
 	}
 }

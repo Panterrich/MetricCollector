@@ -12,7 +12,6 @@ import (
 
 	"github.com/caarlos0/env/v6"
 	"github.com/go-resty/resty/v2"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -167,16 +166,15 @@ func run(_ *cobra.Command, _ []string) error {
 }
 
 func main() {
-	logger := zerolog.Logger{}
-
 	err := env.Parse(&cfgEnv)
 	if err != nil {
-		logger.Println(err)
-		os.Exit(1)
+		log.Err(err).Send()
+		return
 	}
 
 	err = root.Execute()
 	if err != nil {
-		os.Exit(1)
+		log.Err(err).Send()
+		return
 	}
 }

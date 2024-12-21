@@ -31,7 +31,10 @@ func TestMemory_UpdateSequenceCounter(t *testing.T) {
 	_, err := m.GetMetric(ctx, metrics.TypeMetricCounter, "counter")
 	assert.Error(t, err)
 
-	var a int64
+	var (
+		a   int64
+		val any
+	)
 
 	for i := 0; i < Count; i++ {
 		v := rand.Int64N(1024)
@@ -39,7 +42,7 @@ func TestMemory_UpdateSequenceCounter(t *testing.T) {
 
 		assert.NoError(t, m.UpdateMetric(ctx, metrics.TypeMetricCounter, "counter", v))
 
-		val, err := m.GetMetric(ctx, metrics.TypeMetricCounter, "counter")
+		val, err = m.GetMetric(ctx, metrics.TypeMetricCounter, "counter")
 		assert.NoError(t, err)
 		assert.Equal(t, a, val.(int64))
 	}
@@ -60,12 +63,14 @@ func TestMemory_UpdateSequenceGauge(t *testing.T) {
 	_, err := m.GetMetric(ctx, metrics.TypeMetricGauge, "gauge")
 	assert.Error(t, err)
 
+	var val any
+
 	for i := 0; i < Count; i++ {
 		v := rand.Float64()
 
 		assert.NoError(t, m.UpdateMetric(ctx, metrics.TypeMetricGauge, "gauge", v))
 
-		val, err := m.GetMetric(ctx, metrics.TypeMetricGauge, "gauge")
+		val, err = m.GetMetric(ctx, metrics.TypeMetricGauge, "gauge")
 		assert.NoError(t, err)
 		assert.Equal(t, v, val.(float64))
 	}
