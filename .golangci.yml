@@ -11,11 +11,10 @@ run:
   # include test files or not, default is true
   tests: true
 
-
 # output configuration options
 output:
   # colored-line-number|line-number|json|tab|checkstyle, default is "colored-line-number"
-  format: colored-line-number
+  formats: colored-line-number
 
   # print lines of code with issue, default is true
   print-issued-lines: true
@@ -23,12 +22,11 @@ output:
   # print linter name in the end of issue text, default is true
   print-linter-name: true
 
-
 # all available settings of specific linters
 linters-settings:
   govet:
     # report about shadowed variables
-    check-shadowing: true
+    shadow: true
   golint:
     # minimal confidence for issues, default is 0.8
     min-confidence: 0.8
@@ -39,59 +37,92 @@ linters-settings:
     # https://staticcheck.io/docs/options#checks
     checks: ["all", "-ST1018"]
     # https://staticcheck.io/docs/options#initialisms
-    initialisms: [
-      "ACL", "API", "ASCII", "CPU", "CSS", "DNS", "EOF", "GUID", "HTML", "HTTP", "HTTPS", "ID", "IP", "JSON", "QPS",
-      "RAM", "RPC", "SLA", "SMTP", "SQL", "SSH", "TCP", "TLS", "TTL", "UDP", "UI", "GID", "UID", "UUID", "URI", "URL",
-      "UTF8", "VM", "XML", "XMPP", "XSRF", "XSS", "CSV",
-    ]
+    initialisms:
+      [
+        "ACL",
+        "API",
+        "ASCII",
+        "CPU",
+        "CSS",
+        "DNS",
+        "EOF",
+        "GUID",
+        "HTML",
+        "HTTP",
+        "HTTPS",
+        "ID",
+        "IP",
+        "JSON",
+        "QPS",
+        "RAM",
+        "RPC",
+        "SLA",
+        "SMTP",
+        "SQL",
+        "SSH",
+        "TCP",
+        "TLS",
+        "TTL",
+        "UDP",
+        "UI",
+        "GID",
+        "UID",
+        "UUID",
+        "URI",
+        "URL",
+        "UTF8",
+        "VM",
+        "XML",
+        "XMPP",
+        "XSRF",
+        "XSS",
+        "CSV",
+      ]
   cyclop:
     max-complexity: 15
     skip-tests: true
 
-
-
 linters:
   disable-all: true
   enable:
-  - gosimple
-  - govet
-  - staticcheck
-  - ineffassign
-  - unused
-  - asasalint
-  - asciicheck
-  - bidichk
-  - bodyclose
-  - cyclop
-  - dupl
-  - dogsled
-  - dupword
-  - durationcheck
-  - errname
-  - errorlint
-  - zerologlint
-  - gofmt
-  - misspell
-  - unconvert
-  - prealloc
-  - copyloopvar
-  - gocritic
-  - revive
-  - stylecheck
-  - wsl
-  - whitespace
-  - zerologlint
-  - wastedassign
-  - wrapcheck
-  - usestdlibvars
-  - unparam
-  - tparallel
-  - testpackage
-  - testableexamples
-  - tenv
-  - tagalign
-  - sqlclosecheck
-
+    - gosimple
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - cyclop
+    - dupl
+    - dogsled
+    - dupword
+    - durationcheck
+    - errname
+    - errorlint
+    - zerologlint
+    - gofmt
+    - misspell
+    - unconvert
+    - prealloc
+    - copyloopvar
+    - gocritic
+    - revive
+    - stylecheck
+    - wsl
+    - whitespace
+    - zerologlint
+    - wastedassign
+    - wrapcheck
+    - usestdlibvars
+    - unparam
+    - tparallel
+    - testpackage
+    - testableexamples
+    - tenv
+    - tagalign
+    - sqlclosecheck
 
 issues:
   # List of regexps of issue texts to exclude, empty list by default.
