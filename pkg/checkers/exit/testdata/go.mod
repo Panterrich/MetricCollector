@@ -1,6 +1,6 @@
 module github.com/Panterrich/MetricCollector/ExitCheckAnalyzer
 
-go 1.22
+go 1.22.1
 
 require (
 	github.com/caarlos0/env/v6 v6.10.1
