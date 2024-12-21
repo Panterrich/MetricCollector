@@ -1,0 +1,192 @@
+definitions:
+  serialization.Metric:
+    properties:
+      delta:
+        type: integer
+      id:
+        type: string
+      type:
+        type: string
+      value:
+        type: number
+    type: object
+info:
+  contact: {}
+  description: Metric collector service.
+  title: MetricCollector API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: Retrieves all metrics with their names, types, and values
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: List of metrics
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Returns a list of metrics
+      tags:
+      - Metrics
+  /ping:
+    get:
+      consumes:
+      - text/plain
+      description: Checks the availability of the database by pinging it
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Pong
+        "500":
+          description: Failed to ping database
+          schema:
+            type: string
+      summary: Pings the database
+      tags:
+      - Database
+  /update:
+    post:
+      consumes:
+      - application/json
+      description: Updates the value of a metric based on the provided JSON payload
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated metric details
+          schema:
+            $ref: '#/definitions/serialization.Metric'
+        "400":
+          description: Invalid JSON body or invalid metric value
+          schema:
+            type: string
+        "404":
+          description: Metric not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Updates a metric using JSON
+      tags:
+      - Metrics
+  /update/{metricType}/{metricName}/{metricValue}:
+    post:
+      description: Updates the value of an existing metric or create a new metric
+        by its name and type
+      parameters:
+      - description: Type of the metric (e.g., gauge, counter)
+        in: path
+        name: metricType
+        required: true
+        type: string
+      - description: Name of the metric to be updated.
+        in: path
+        name: metricName
+        required: true
+        type: string
+      - description: New value for the metric.
+        in: path
+        name: metricValue
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Metric updated successfully
+        "400":
+          description: Invalid input or update failure
+          schema:
+            type: string
+      summary: Updates a metric
+      tags:
+      - Metrics
+  /updates:
+    post:
+      consumes:
+      - application/json
+      description: Updates the values of multiple metrics based on the provided JSON
+        payload
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated metrics
+        "400":
+          description: Invalid JSON body or invalid metrics
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Updates multiple metrics using JSON
+      tags:
+      - Metrics
+  /value/:
+    post:
+      consumes:
+      - application/json
+      description: Retrieves a metric by its name and type and returns it in JSON
+        format
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Getting metric details
+          schema:
+            $ref: '#/definitions/serialization.Metric'
+        "400":
+          description: Invalid JSON body
+          schema:
+            type: string
+        "404":
+          description: Metric not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Returns a metric as JSON
+      tags:
+      - Metrics
+  /value/{metricType}/{metricName}:
+    get:
+      description: Retrieves the value of a metric by its name and type
+      parameters:
+      - description: Type of the metric (e.g., gauge, counter)
+        in: path
+        name: metricType
+        required: true
+        type: string
+      - description: Name of the metric to be getting.
+        in: path
+        name: metricName
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Metric Value
+          schema:
+            type: string
+        "404":
+          description: Metric Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Returns the value of a specific metric
+      tags:
+      - Metrics
+swagger: "2.0"
