@@ -25,6 +25,14 @@ func WithDatabase(c collector.Collector, next DatabaseHandler) http.HandlerFunc 
 	})
 }
 
+// @Summary Pings the database
+// @Description Checks the availability of the database by pinging it
+// @Tags Database
+// @Accept text/plain
+// @Produce text/plain
+// @Success 200 "Pong"
+// @Failure 500 {string} error "Failed to ping database"
+// @Router /ping [get]
 func PingDatabase(db *sql.DB, w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 	defer cancel()

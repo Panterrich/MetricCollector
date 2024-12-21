@@ -1,5 +1,9 @@
 package main
 
+// @Title MetricCollector API
+// @Description Metric collector service.
+// @Version 1.0
+
 import (
 	"context"
 	"database/sql"

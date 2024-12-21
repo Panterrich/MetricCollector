@@ -21,6 +21,13 @@ func WithCollector(c collector.Collector, next CollectorHandler) http.HandlerFun
 	return http.HandlerFunc(fn)
 }
 
+// @Summary Returns a list of metrics
+// @Description Retrieves all metrics with their names, types, and values
+// @Tags Metrics
+// @Produce text/html
+// @Success 200 {string} string "List of metrics"
+// @Failure 500 {string} error "Internal server error"
+// @Router / [get]
 func GetListMetrics(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	metrics := c.GetAllMetrics(r.Context())
 
@@ -35,13 +42,23 @@ func GetListMetrics(c collector.Collector, w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// @Summary Returns the value of a specific metric
+// @Description Retrieves the value of a metric by its name and type
+// @Tags Metrics
+// @Produce text/plain
+// @Param metricType path string true "Type of the metric (e.g., gauge, counter)"
+// @Param metricName path string true "Name of the metric to be getting."
+// @Success 200 {string} string "Metric Value"
+// @Failure 404 {string} error "Metric Not Found"
+// @Failure 500 {string} error "Internal Server Error"
+// @Router /value/{metricType}/{metricName} [get]
 func GetMetric(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
 
 	value, err := c.GetMetric(r.Context(), metricType, metricName)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("metric %s not found", metricName), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("metric %s(%s) not found", metricName, metricType), http.StatusNotFound)
 		return
 	}
 
@@ -55,6 +72,15 @@ func GetMetric(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// @Summary Updates a metric
+// @Description Updates the value of an existing metric or create a new metric by its name and type
+// @Tags Metrics
+// @Param metricType path string true "Type of the metric (e.g., gauge, counter)"
+// @Param metricName path string true "Name of the metric to be updated."
+// @Param metricValue path string true "New value for the metric."
+// @Success 200 "Metric updated successfully"
+// @Failure 400 {string} error "Invalid input or update failure"
+// @Router /update/{metricType}/{metricName}/{metricValue} [post]
 func UpdateMetric(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	metricType := chi.URLParam(r, "metricType")
 	metricName := chi.URLParam(r, "metricName")
@@ -75,6 +101,16 @@ func UpdateMetric(c collector.Collector, w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusOK)
 }
 
+// @Summary Returns a metric as JSON
+// @Description Retrieves a metric by its name and type and returns it in JSON format
+// @Tags Metrics
+// @Accept application/json
+// @Produce application/json
+// @Success 200 {object} serialization.Metric "Getting metric details"
+// @Failure 400 {string} error "Invalid JSON body"
+// @Failure 404 {string} error "Metric not found"
+// @Failure 500 {string} error "Internal server error"
+// @Router /value/ [post]
 func GetMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	var metric serialization.Metric
 
@@ -103,6 +139,16 @@ func GetMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Request
 	}
 }
 
+// @Summary Updates a metric using JSON
+// @Description Updates the value of a metric based on the provided JSON payload
+// @Tags Metrics
+// @Accept application/json
+// @Produce application/json
+// @Success 200 {object} serialization.Metric "Updated metric details"
+// @Failure 400 {string} error "Invalid JSON body or invalid metric value"
+// @Failure 404 {string} error "Metric not found"
+// @Failure 500 {string} error "Internal server error"
+// @Router /update [post]
 func UpdateMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	var metric serialization.Metric
 
@@ -144,6 +190,15 @@ func UpdateMetricJSON(c collector.Collector, w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// @Summary Updates multiple metrics using JSON
+// @Description Updates the values of multiple metrics based on the provided JSON payload
+// @Tags Metrics
+// @Accept application/json
+// @Produce application/json
+// @Success 200 "Successfully updated metrics"
+// @Failure 400 {string} error "Invalid JSON body or invalid metrics"
+// @Failure 500 {string} error "Internal server error"
+// @Router /updates [post]
 func UpdateMetricsJSON(c collector.Collector, w http.ResponseWriter, r *http.Request) {
 	var jsonMetrics []serialization.Metric
 
