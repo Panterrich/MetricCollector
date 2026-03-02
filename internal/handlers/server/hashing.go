@@ -49,17 +49,15 @@ func WithHashing(key []byte) func(next http.Handler) http.Handler {
 			r.Body = rdr
 
 			h := r.Header.Get("HashSHA256")
-			if h != "" {
-				check, err = hash.CheckMessage(bodyBytes, key, []byte(h))
-				if err != nil {
-					http.Error(w, fmt.Sprintf("hash check message: %v", err), http.StatusInternalServerError)
-					return
-				}
+			check, err = hash.CheckMessage(bodyBytes, key, []byte(h))
+			if err != nil {
+				http.Error(w, fmt.Sprintf("hash check message: %v", err), http.StatusInternalServerError)
+				return
+			}
 
-				if !check {
-					http.Error(w, fmt.Sprintf("hash message invalid: %v", err), http.StatusBadRequest)
-					return
-				}
+			if !check {
+				http.Error(w, fmt.Sprintf("hash message invalid: %v", err), http.StatusBadRequest)
+				return
 			}
 
 			hw := &hashingResponseWriter{
