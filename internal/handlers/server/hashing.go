@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -49,7 +50,14 @@ func WithHashing(key []byte) func(next http.Handler) http.Handler {
 			r.Body = rdr
 
 			h := r.Header.Get("HashSHA256")
-			check, err = hash.CheckMessage(bodyBytes, key, []byte(h))
+
+			hBytes, err := hex.DecodeString(h)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("decode hash: %v", err), http.StatusBadRequest)
+				return
+			}
+
+			check, err = hash.CheckMessage(bodyBytes, key, hBytes)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("hash check message: %v", err), http.StatusInternalServerError)
 				return
