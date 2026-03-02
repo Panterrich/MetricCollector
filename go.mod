@@ -1,6 +1,6 @@
 module github.com/Panterrich/MetricCollector
 
-go 1.22.1
+go 1.24
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -17,6 +17,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.4
 	github.com/ultraware/whitespace v0.2.0
+	go.openly.dev/pointy v1.3.0
 	golang.org/x/tools v0.28.0
 	honnef.co/go/tools v0.5.1
 )
@@ -48,7 +49,6 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	go.openly.dev/pointy v1.3.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20231108232855-2478ac86f678 // indirect
 	golang.org/x/mod v0.22.0 // indirect
