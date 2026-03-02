@@ -13,20 +13,40 @@ import (
 type (
 	hashingResponseWriter struct {
 		http.ResponseWriter
+		headers      http.Header
+		statusCode   int
+		wroteHeader  bool
 		responseData *bytes.Buffer
 	}
 )
 
 var _ http.ResponseWriter = &hashingResponseWriter{}
 
+func (r *hashingResponseWriter) Header() http.Header {
+	return r.headers
+}
+
+func (r *hashingResponseWriter) WriteHeader(statusCode int) {
+	if r.wroteHeader {
+		return
+	}
+
+	r.statusCode = statusCode
+	r.wroteHeader = true
+}
+
 //nolint:wrapcheck
 func (r *hashingResponseWriter) Write(b []byte) (int, error) {
+	if !r.wroteHeader {
+		r.WriteHeader(http.StatusOK)
+	}
+
 	size, err := r.responseData.Write(b)
 	if err != nil {
 		return size, fmt.Errorf("hashing wrapper write: %w", err)
 	}
 
-	return r.ResponseWriter.Write(b)
+	return size, nil
 }
 
 func WithHashing(key []byte) func(next http.Handler) http.Handler {
@@ -70,6 +90,7 @@ func WithHashing(key []byte) func(next http.Handler) http.Handler {
 
 			hw := &hashingResponseWriter{
 				ResponseWriter: w,
+				headers:        make(http.Header),
 				responseData:   bytes.NewBuffer(nil),
 			}
 
@@ -81,7 +102,21 @@ func WithHashing(key []byte) func(next http.Handler) http.Handler {
 				return
 			}
 
-			w.Header().Set("HashSHA256", string(rhash))
+			for key, values := range hw.Header() {
+				for _, value := range values {
+					w.Header().Add(key, value)
+				}
+			}
+
+			w.Header().Set("HashSHA256", hex.EncodeToString(rhash))
+
+			if hw.statusCode == 0 {
+				hw.statusCode = http.StatusOK
+			}
+
+			w.WriteHeader(hw.statusCode)
+
+			_, _ = w.Write(hw.responseData.Bytes())
 		}
 
 		return http.HandlerFunc(hashFn)
