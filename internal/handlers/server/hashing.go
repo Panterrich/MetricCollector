@@ -56,7 +56,7 @@ func WithHashing(key []byte) func(next http.Handler) http.Handler {
 			}
 
 			if !check {
-				http.Error(w, fmt.Sprintf("hash message invalid: %v", err), http.StatusBadRequest)
+				http.Error(w, fmt.Sprintf("hash message invalid: %v", h), http.StatusBadRequest)
 				return
 			}
 

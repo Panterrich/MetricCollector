@@ -3,7 +3,10 @@ package hash
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+
+	"github.com/rs/zerolog/log"
 )
 
 func Message(data, key []byte) ([]byte, error) {
@@ -23,6 +26,12 @@ func CheckMessage(data, key, expectedHash []byte) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("hashing message: %w", err)
 	}
+
+	log.Info().Msgf(
+		"hash: %s, expectedHash: %s",
+		hex.EncodeToString(hash),
+		hex.EncodeToString(expectedHash),
+	)
 
 	return hmac.Equal(hash, expectedHash), nil
 }
