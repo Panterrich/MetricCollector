@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Panterrich/MetricCollector/internal/metrics"
+	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
 func TestNewMetric_KnownTypes(t *testing.T) {

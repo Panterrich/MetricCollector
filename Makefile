@@ -37,6 +37,9 @@ GOLANGCI_BIN:=
 endif
 endif
 
+.PHONY: all
+all: test build ## default scratch target: test and build
+
 # Check global bin version
 ifneq (, $(shell which golangci-lint))
 GOLANGCI_VERSION:=$(shell golangci-lint --version 2> /dev/null )
@@ -68,8 +71,9 @@ lint-full: .lint-full
 .bin-deps:
 	mkdir -p bin
 	$(info Installing binary dependencies...)
-	GOBIN=$(LOCAL_BIN) go install github.com/mitchellh/gox@v1.0.1  && \
-	GOBIN=$(LOCAL_BIN) go install golang.org/x/tools/cmd/goimports@v0.1.9 && \
+	GOBIN=$(LOCAL_BIN) go install github.com/mitchellh/gox@v1.0.1
+	GOBIN=$(LOCAL_BIN) go install golang.org/x/tools/cmd/goimports@v0.1.9
+	GOBIN=$(LOCAL_BIN) go install github.com/swaggo/swag/cmd/swag@latest
 
 .PHONY: .deps
 .deps:
@@ -78,9 +82,6 @@ lint-full: .lint-full
 
 .PHONY: update-deps
 update-deps: .deps .bin-deps
-
-.PHONY: all
-all: test build ## default scratch target: test and build
 
 .PHONY: .test
 .test:
@@ -122,3 +123,12 @@ DISABLE_CMD_LIST_BUILD?=0
 
 .PHONY: build
 build: .build ## build project
+
+SWAGGER_BIN:=$(LOCAL_BIN)/swag
+
+.PHONY: .swagger
+.swagger:
+	$(SWAGGER_BIN) init --generalInfo cmd/server/main.go --output ./swagger/
+
+.PHONY: swagger
+swagger: .swagger ## generate swagger docs

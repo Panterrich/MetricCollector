@@ -1,100 +1,45 @@
 package main
 
+// @Title MetricCollector API
+// @Description Metric collector service.
+// @Version 1.0
+
 import (
 	"fmt"
-	"net"
-	"net/http"
-	"os"
 
 	"github.com/caarlos0/env"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/rs/zerolog"
-	"github.com/spf13/cobra"
-
-	"github.com/Panterrich/MetricCollector/internal/collector"
-	"github.com/Panterrich/MetricCollector/internal/handlers/server"
+	"github.com/rs/zerolog/log"
 )
 
 var (
-	DefaultEndPoint = "localhost:8080"
+	cfg    = Config{LogLevel: int(zerolog.TraceLevel) - 1}
+	cfgEnv = Config{LogLevel: int(zerolog.TraceLevel) - 1}
+
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
 )
 
-type Config struct {
-	EndPoint string `env:"ADDRESS"`
-}
-
-var (
-	cfgEnv Config
-	cfg    Config
-
-	root = &cobra.Command{
-		Use:   "server",
-		Short: "Server for storing metrics",
-		Long:  "Server for storing metrics",
-		Args: func(cmd *cobra.Command, args []string) error {
-
-			if err := cobra.ExactArgs(0)(cmd, args); err != nil {
-				return err
-			}
-
-			if _, _, err := net.SplitHostPort(cfg.EndPoint); err != nil {
-				return fmt.Errorf("invalid end-point for HTTP-server: %w", err)
-			}
-
-			return nil
-		},
-		PreRun: preRun,
-		RunE:   run,
-	}
-)
-
-func init() {
-	root.Flags().StringVarP(&cfg.EndPoint, "a", "a", DefaultEndPoint, "end-point for HTTP-server")
-}
-
-func preRun(_ *cobra.Command, _ []string) {
-	if cfgEnv.EndPoint != "" {
-		cfg.EndPoint = cfgEnv.EndPoint
-	}
-}
-
-func run(_ *cobra.Command, _ []string) error {
-	storage := collector.NewMemStorage()
-	server.Storage = &storage
-
-	r := chi.NewRouter()
-
-	// r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-
-	r.Route("/", func(r chi.Router) {
-		r.Get("/", server.GetListMetrics)
-		r.Route("/", func(r chi.Router) {
-			r.Get("/value/{metricType}/{metricName}", server.GetMetric)
-			r.Post("/update/{metricType}/{metricName}/{metricValue}", server.UpdateMetric)
-		})
-	})
-
-	err := http.ListenAndServe(cfg.EndPoint, r)
-	if err != nil {
-		return fmt.Errorf("http server internal error: %w", err)
-	}
-
-	return nil
+func printStartMessage() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
 }
 
 func main() {
-	logger := zerolog.Logger{}
+	printStartMessage()
 
 	err := env.Parse(&cfgEnv)
 	if err != nil {
-		logger.Println(err)
-		os.Exit(1)
+		log.Err(err).Send()
+		return
 	}
 
 	err = root.Execute()
 	if err != nil {
-		os.Exit(1)
+		log.Err(err).Send()
+		return
 	}
 }

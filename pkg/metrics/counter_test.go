@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Panterrich/MetricCollector/internal/metrics"
+	"github.com/Panterrich/MetricCollector/pkg/metrics"
 )
 
 func TestCounter(t *testing.T) {
@@ -61,6 +61,9 @@ func TestCounter(t *testing.T) {
 			assert.Equal(t, tt.fields.name, c.Name())
 			assert.Equal(t, metrics.TypeMetricCounter, c.Type())
 			assert.Equal(t, tt.expected, c.Value())
+
+			nc := metrics.Clone(c)
+			assert.Equal(t, nc, c)
 		})
 	}
 }
