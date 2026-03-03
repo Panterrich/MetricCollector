@@ -2,7 +2,7 @@ package agent
 
 import (
 	"context"
-	"fmt"
+	"encoding/hex"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -63,9 +63,9 @@ func ReportAllMetrics(
 
 		resp, err = client.R().
 			SetBody(data).
+			SetHeader("HashSHA256", hex.EncodeToString(hash)).
 			SetPathParams(map[string]string{
-				"address":    serverAddress,
-				"HashSHA256": fmt.Sprintf("%x", hash),
+				"address": serverAddress,
 			}).Post("http://{address}/updates/")
 
 		if err == nil {
